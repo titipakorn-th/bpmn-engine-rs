@@ -1,0 +1,86 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "id": "@id",
+    "type": "@type",
+    "dct": "http://purl.org/dc/terms/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "prov": "http://www.w3.org/ns/prov#",
+    "owl": "http://www.w3.org/2002/07/owl#",
+    "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+    "skos": "http://www.w3.org/2004/02/skos/core#",
+    "bpmn": "https://example.org/bpmn-engine#",
+    
+    "name": "dct:title",
+    "description": "dct:description",
+    "createdAt": {"@id": "dct:created", "@type": "xsd:dateTime"},
+    "updatedAt": {"@id": "dct:modified", "@type": "xsd:dateTime"},
+    "version": "dct:hasVersion",
+    
+    "goal": "bpmn:goal",
+    "capability": {"@id": "bpmn:hasCapability", "@type": "@id", "@container": "@set"},
+    "activity": {"@id": "bpmn:hasActivity", "@type": "@id", "@container": "@set"},
+    "performer": {"@id": "bpmn:hasPerformer", "@type": "@id", "@container": "@set"},
+    "status": "bpmn:status"
+  },
+  
+  "id": "https://example.org/bpmn-engine/project",
+  "type": "bpmn:Project",
+  "name": "BPMN Engine Rust Implementation",
+  "description": "BPMN 2.0 execution engine implemented in Rust, based on bpmn-engine npm package. Supports BPMN 2.0 JSON format as standard I/O, designed as a Rust crate with future GraphQL API and persistence layer integration.",
+  "version": "0.1.0",
+  "goal": "Provide a high-performance, type-safe BPMN 2.0 execution engine for Rust applications, with activity/capability-based design following DoDAF v2 DM2 principles.",
+  "status": "completed",
+  "createdAt": "2025-01-27T00:00:00+09:00",
+  "updatedAt": "2025-11-10T06:54:02+09:00",
+  
+  "capability": [
+    "https://example.org/bpmn-engine/capability/process-execution",
+    "https://example.org/bpmn-engine/capability/bpmn-parsing",
+    "https://example.org/bpmn-engine/capability/activity-management",
+    "https://example.org/bpmn-engine/capability/token-flow-control",
+    "https://example.org/bpmn-engine/capability/plugin-system",
+    "https://example.org/bpmn-engine/capability/listener-hooks",
+    "https://example.org/bpmn-engine/capability/persistence-abstraction"
+  ],
+  
+  "activity": [
+    "https://example.org/bpmn-engine/activity/parse-bpmn-json",
+    "https://example.org/bpmn-engine/activity/execute-process",
+    "https://example.org/bpmn-engine/activity/manage-instance",
+    "https://example.org/bpmn-engine/activity/execute-task",
+    "https://example.org/bpmn-engine/activity/evaluate-gateway",
+    "https://example.org/bpmn-engine/activity/handle-event",
+    "https://example.org/bpmn-engine/activity/register-plugin",
+    "https://example.org/bpmn-engine/activity/register-listener",
+    "https://example.org/bpmn-engine/activity/persist-instance"
+  ],
+  
+  "performer": [
+    {
+      "@id": "https://example.org/bpmn-engine/performer/engine",
+      "@type": "bpmn:Service",
+      "name": "BPMN Engine",
+      "description": "Main execution engine for BPMN processes"
+    },
+    {
+      "@id": "https://example.org/bpmn-engine/performer/parser",
+      "@type": "bpmn:Service",
+      "name": "BPMN Parser",
+      "description": "Parser for BPMN 2.0 JSON format"
+    },
+    {
+      "@id": "https://example.org/bpmn-engine/performer/activity-executor",
+      "@type": "bpmn:Service",
+      "name": "Activity Executor",
+      "description": "Executor for BPMN activities (tasks, gateways, events)"
+    },
+    {
+      "@id": "https://example.org/bpmn-engine/performer/repository",
+      "@type": "bpmn:System",
+      "name": "Repository",
+      "description": "Persistence layer for process instances"
+    }
+  ]
+}
+

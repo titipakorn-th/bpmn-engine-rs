@@ -1,0 +1,62 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "id": "@id",
+    "type": "@type",
+    "dct": "http://purl.org/dc/terms/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "bpmn": "https://example.org/bpmn-engine#",
+    
+    "name": "dct:title",
+    "description": "dct:description",
+    "activity": {"@id": "bpmn:realizedBy", "@type": "@id", "@container": "@set"},
+    "performer": {"@id": "bpmn:performedBy", "@type": "@id"}
+  },
+  
+  "@graph": [
+    {
+      "id": "https://example.org/bpmn-engine/capability/process-execution",
+      "type": "bpmn:Capability",
+      "name": "Process Execution Capability",
+      "description": "Capability to execute BPMN 2.0 process definitions, managing process instances, execution context, and token flow control.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/execute-process",
+        "https://example.org/bpmn-engine/activity/manage-instance"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/engine"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/capability/bpmn-parsing",
+      "type": "bpmn:Capability",
+      "name": "BPMN Parsing Capability",
+      "description": "Capability to parse and serialize BPMN 2.0 JSON format definitions, converting between JSON and internal process model representation.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/parse-bpmn-json"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/capability/activity-management",
+      "type": "bpmn:Capability",
+      "name": "Activity Management Capability",
+      "description": "Capability to manage and execute BPMN activities (tasks, gateways, events) with their associated capabilities and behaviors.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/execute-task",
+        "https://example.org/bpmn-engine/activity/evaluate-gateway",
+        "https://example.org/bpmn-engine/activity/handle-event"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/activity-executor"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/capability/token-flow-control",
+      "type": "bpmn:Capability",
+      "name": "Token Flow Control Capability",
+      "description": "Capability to control token flow through sequence flows, managing parallel and exclusive paths, conditions, and synchronization.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/manage-instance"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/engine"
+    }
+  ]
+}
+

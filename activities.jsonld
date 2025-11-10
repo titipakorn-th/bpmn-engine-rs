@@ -1,0 +1,117 @@
+{
+  "@context": {
+    "@version": 1.1,
+    "id": "@id",
+    "type": "@type",
+    "dct": "http://purl.org/dc/terms/",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "bpmn": "https://example.org/bpmn-engine#",
+    "prov": "http://www.w3.org/ns/prov#",
+    
+    "name": "dct:title",
+    "description": "dct:description",
+    "capability": {"@id": "bpmn:requiresCapability", "@type": "@id", "@container": "@set"},
+    "input": {"@id": "bpmn:hasInput", "@type": "@id", "@container": "@set"},
+    "output": {"@id": "bpmn:hasOutput", "@type": "@id", "@container": "@set"},
+    "performer": {"@id": "prov:wasPerformedBy", "@type": "@id"}
+  },
+  
+  "@graph": [
+    {
+      "id": "https://example.org/bpmn-engine/activity/parse-bpmn-json",
+      "type": "bpmn:Activity",
+      "name": "Parse BPMN JSON",
+      "description": "Parse BPMN 2.0 JSON format definition into internal process model representation.",
+      "capability": ["https://example.org/bpmn-engine/capability/bpmn-parsing"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "bpmn_json", "type": "xsd:string"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "process_model", "type": "bpmn:ProcessModel"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/execute-process",
+      "type": "bpmn:Activity",
+      "name": "Execute Process",
+      "description": "Execute a BPMN process instance, managing execution flow through activities and sequence flows.",
+      "capability": [
+        "https://example.org/bpmn-engine/capability/process-execution",
+        "https://example.org/bpmn-engine/capability/token-flow-control"
+      ],
+      "input": [
+        {"@id": "bpmn:Input", "name": "process_definition", "type": "bpmn:ProcessDefinition"},
+        {"@id": "bpmn:Input", "name": "initial_variables", "type": "bpmn:Variables"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "process_instance", "type": "bpmn:ProcessInstance"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/engine"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/manage-instance",
+      "type": "bpmn:Activity",
+      "name": "Manage Process Instance",
+      "description": "Manage process instance state, execution context, and token flow through the process.",
+      "capability": [
+        "https://example.org/bpmn-engine/capability/process-execution",
+        "https://example.org/bpmn-engine/capability/token-flow-control"
+      ],
+      "input": [
+        {"@id": "bpmn:Input", "name": "instance_id", "type": "xsd:string"},
+        {"@id": "bpmn:Input", "name": "action", "type": "bpmn:InstanceAction"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "instance_state", "type": "bpmn:InstanceState"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/engine"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/execute-task",
+      "type": "bpmn:Activity",
+      "name": "Execute Task",
+      "description": "Execute a BPMN task (ServiceTask, UserTask, ScriptTask, etc.) with its associated behavior.",
+      "capability": ["https://example.org/bpmn-engine/capability/activity-management"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "task_definition", "type": "bpmn:TaskDefinition"},
+        {"@id": "bpmn:Input", "name": "execution_context", "type": "bpmn:ExecutionContext"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "task_result", "type": "bpmn:TaskResult"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/activity-executor"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/evaluate-gateway",
+      "type": "bpmn:Activity",
+      "name": "Evaluate Gateway",
+      "description": "Evaluate gateway conditions and determine outgoing sequence flows (ExclusiveGateway, ParallelGateway, InclusiveGateway, etc.).",
+      "capability": ["https://example.org/bpmn-engine/capability/activity-management"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "gateway_definition", "type": "bpmn:GatewayDefinition"},
+        {"@id": "bpmn:Input", "name": "execution_context", "type": "bpmn:ExecutionContext"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "selected_flows", "type": "bpmn:SequenceFlowList"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/activity-executor"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/handle-event",
+      "type": "bpmn:Activity",
+      "name": "Handle Event",
+      "description": "Handle BPMN events (StartEvent, EndEvent, IntermediateCatchEvent, IntermediateThrowEvent, etc.).",
+      "capability": ["https://example.org/bpmn-engine/capability/activity-management"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "event_definition", "type": "bpmn:EventDefinition"},
+        {"@id": "bpmn:Input", "name": "execution_context", "type": "bpmn:ExecutionContext"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "event_result", "type": "bpmn:EventResult"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/activity-executor"
+    }
+  ]
+}
+
