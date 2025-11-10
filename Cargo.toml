@@ -3,11 +3,11 @@ name = "bpmn-engine"
 version = "0.1.0"
 edition = "2021"
 authors = ["gftdcojp"]
-description = "BPMN 2.0 execution engine for Rust"
+description = "BPMN 2.0 execution engine for Rust with JSON and XML format support"
 license = "Apache-2.0"
 repository = "https://github.com/gftdcojp/bpmn-engine-ts"
 readme = "README.md"
-keywords = ["bpmn", "workflow", "process", "engine", "execution"]
+keywords = ["bpmn", "workflow", "process", "engine", "execution", "xml", "json"]
 categories = ["algorithms", "concurrency"]
 
 [lib]

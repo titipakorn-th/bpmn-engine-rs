@@ -3,7 +3,8 @@
 //! BPMN 2.0 execution engine for Rust.
 //!
 //! This crate provides a high-performance, type-safe BPMN 2.0 execution engine
-//! that supports BPMN 2.0 JSON format as standard I/O.
+//! that supports both BPMN 2.0 JSON and XML formats as standard I/O, with
+//! automatic format detection and bidirectional conversion.
 //!
 //! ## Design Principles
 //!
@@ -12,21 +13,47 @@
 //! - **Extensibility**: Support for custom tasks and listeners
 //! - **Future-ready**: Designed for GraphQL API and persistence layer integration
 //!
-//! ## Example
+//! ## Examples
 //!
+//! ### Parse JSON
 //! ```no_run
-//! use bpmn_engine::{Engine, ProcessDefinition};
+//! use bpmn_engine::model::ProcessDefinition;
 //!
-//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let engine = Engine::new();
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
 //! let definition = ProcessDefinition::from_json(r#"
 //! {
 //!   "id": "process1",
 //!   "name": "Example Process",
 //!   "elements": []
 //! }"#)?;
+//! # Ok(())
+//! # }
+//! ```
 //!
-//! let instance = engine.start_process(definition, None).await?;
+//! ### Parse XML
+//! ```no_run
+//! use bpmn_engine::model::ProcessDefinition;
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let definition = ProcessDefinition::from_xml(r#"
+//! <?xml version="1.0"?>
+//! <bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL">
+//!   <bpmn2:process id="process1" isExecutable="true">
+//!     <bpmn2:startEvent id="start" />
+//!   </bpmn2:process>
+//! </bpmn2:definitions>"#)?;
+//! # Ok(())
+//! # }
+//! ```
+//!
+//! ### Auto-detect Format
+//! ```no_run
+//! use bpmn_engine::model::{ProcessDefinition, format::BpmnFormat};
+//!
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! let input = r#"{"id":"process1","elements":[]}"#;
+//! let (definition, format) = ProcessDefinition::from_auto(input)?;
+//! assert_eq!(format, BpmnFormat::Json);
 //! # Ok(())
 //! # }
 //! ```
