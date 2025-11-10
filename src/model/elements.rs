@@ -33,6 +33,52 @@ impl ProcessDefinition {
         Self::from_bpmn_json(json_process)
     }
 
+    /// Create a new process definition from XML
+    pub fn from_xml(xml: &str) -> Result<Self, crate::model::format::ParseError> {
+        crate::model::xml::parse_bpmn_xml(xml)
+    }
+
+    /// Create a new process definition with automatic format detection
+    pub fn from_auto(input: &str) -> Result<(Self, crate::model::format::BpmnFormat), crate::model::format::ParseError> {
+        crate::model::format::AutoParser::parse(input)
+    }
+
+    /// Serialize to JSON
+    pub fn to_json(&self) -> Result<String, crate::model::format::SerializeError> {
+        let mut json_elements = Vec::new();
+        
+        // Convert elements to JSON
+        for element in self.elements.values() {
+            json_elements.push(element.to_json_element());
+        }
+        
+        // Convert flows to JSON
+        for flow in self.flows.values() {
+            json_elements.push(BpmnJsonElement::SequenceFlow(flow.to_json()));
+        }
+        
+        let json_process = BpmnJsonProcess {
+            id: self.id.clone(),
+            name: self.name.clone(),
+            process_type: self.process_type.clone(),
+            is_executable: self.is_executable,
+            elements: json_elements,
+            variables: self.variables.iter().map(|(k, v)| {
+                (k.clone(), crate::model::json::BpmnJsonVariable {
+                    name: v.name.clone(),
+                    variable_type: v.variable_type.clone(),
+                    default_value: v.default_value.clone(),
+                })
+            }).collect(),
+        };
+        serde_json::to_string_pretty(&json_process).map_err(crate::model::format::SerializeError::Json)
+    }
+
+    /// Serialize to XML
+    pub fn to_xml(&self) -> Result<String, crate::model::format::SerializeError> {
+        crate::model::xml::serialize_bpmn_xml(self)
+    }
+
     /// Create from BPMn JSON structure
     pub fn from_bpmn_json(json_process: BpmnJsonProcess) -> Result<Self, serde_json::Error> {
         let mut elements = HashMap::new();
@@ -170,6 +216,22 @@ impl ProcessElement {
             ProcessElement::InclusiveGateway(e) => &e.base.id,
         }
     }
+
+    pub fn to_json_element(&self) -> BpmnJsonElement {
+        match self {
+            ProcessElement::StartEvent(e) => BpmnJsonElement::StartEvent(e.to_json()),
+            ProcessElement::EndEvent(e) => BpmnJsonElement::EndEvent(e.to_json()),
+            ProcessElement::IntermediateCatchEvent(e) => BpmnJsonElement::IntermediateCatchEvent(e.to_json()),
+            ProcessElement::IntermediateThrowEvent(e) => BpmnJsonElement::IntermediateThrowEvent(e.to_json()),
+            ProcessElement::ServiceTask(e) => BpmnJsonElement::ServiceTask(e.to_json()),
+            ProcessElement::UserTask(e) => BpmnJsonElement::UserTask(e.to_json()),
+            ProcessElement::ScriptTask(e) => BpmnJsonElement::ScriptTask(e.to_json()),
+            ProcessElement::ManualTask(e) => BpmnJsonElement::ManualTask(e.to_json()),
+            ProcessElement::ExclusiveGateway(e) => BpmnJsonElement::ExclusiveGateway(e.to_json()),
+            ProcessElement::ParallelGateway(e) => BpmnJsonElement::ParallelGateway(e.to_json()),
+            ProcessElement::InclusiveGateway(e) => BpmnJsonElement::InclusiveGateway(e.to_json()),
+        }
+    }
 }
 
 /// Base element properties
@@ -204,6 +266,17 @@ impl StartEvent {
             event_definition: json.event_definition.map(EventDefinition::from_json),
         }
     }
+
+    pub fn to_json(&self) -> BpmnJsonStartEvent {
+        BpmnJsonStartEvent {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            event_definition: self.event_definition.as_ref().map(EventDefinition::to_json),
+        }
+    }
 }
 
 /// End Event
@@ -218,6 +291,17 @@ impl EndEvent {
         Self {
             base: ElementBase::from_json(json.base),
             event_definition: json.event_definition.map(EventDefinition::from_json),
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonEndEvent {
+        BpmnJsonEndEvent {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            event_definition: self.event_definition.as_ref().map(EventDefinition::to_json),
         }
     }
 }
@@ -236,6 +320,17 @@ impl IntermediateCatchEvent {
             event_definition: json.event_definition.map(EventDefinition::from_json),
         }
     }
+
+    pub fn to_json(&self) -> BpmnJsonIntermediateCatchEvent {
+        BpmnJsonIntermediateCatchEvent {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            event_definition: self.event_definition.as_ref().map(EventDefinition::to_json),
+        }
+    }
 }
 
 /// Intermediate Throw Event
@@ -250,6 +345,17 @@ impl IntermediateThrowEvent {
         Self {
             base: ElementBase::from_json(json.base),
             event_definition: json.event_definition.map(EventDefinition::from_json),
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonIntermediateThrowEvent {
+        BpmnJsonIntermediateThrowEvent {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            event_definition: self.event_definition.as_ref().map(EventDefinition::to_json),
         }
     }
 }
@@ -272,6 +378,19 @@ impl ServiceTask {
             io_mapping: IoMapping::from_json(json.io_mapping),
         }
     }
+
+    pub fn to_json(&self) -> BpmnJsonServiceTask {
+        BpmnJsonServiceTask {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            implementation: self.implementation.clone(),
+            operation_ref: self.operation_ref.clone(),
+            io_mapping: self.io_mapping.to_json(),
+        }
+    }
 }
 
 /// User Task
@@ -288,6 +407,18 @@ impl UserTask {
             base: ElementBase::from_json(json.base),
             assignment: json.assignment.map(Assignment::from_json),
             form_key: json.form_key,
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonUserTask {
+        BpmnJsonUserTask {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            assignment: self.assignment.as_ref().map(Assignment::to_json),
+            form_key: self.form_key.clone(),
         }
     }
 }
@@ -308,6 +439,18 @@ impl ScriptTask {
             script: json.script,
         }
     }
+
+    pub fn to_json(&self) -> BpmnJsonScriptTask {
+        BpmnJsonScriptTask {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            script_format: self.script_format.clone(),
+            script: self.script.clone(),
+        }
+    }
 }
 
 /// Manual Task
@@ -320,6 +463,16 @@ impl ManualTask {
     pub fn from_json(json: BpmnJsonManualTask) -> Self {
         Self {
             base: ElementBase::from_json(json.base),
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonManualTask {
+        BpmnJsonManualTask {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
         }
     }
 }
@@ -338,6 +491,17 @@ impl ExclusiveGateway {
             default_flow: json.default_flow,
         }
     }
+
+    pub fn to_json(&self) -> BpmnJsonExclusiveGateway {
+        BpmnJsonExclusiveGateway {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            default_flow: self.default_flow.clone(),
+        }
+    }
 }
 
 /// Parallel Gateway
@@ -350,6 +514,16 @@ impl ParallelGateway {
     pub fn from_json(json: BpmnJsonParallelGateway) -> Self {
         Self {
             base: ElementBase::from_json(json.base),
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonParallelGateway {
+        BpmnJsonParallelGateway {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
         }
     }
 }
@@ -366,6 +540,17 @@ impl InclusiveGateway {
         Self {
             base: ElementBase::from_json(json.base),
             default_flow: json.default_flow,
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonInclusiveGateway {
+        BpmnJsonInclusiveGateway {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            default_flow: self.default_flow.clone(),
         }
     }
 }
@@ -388,6 +573,19 @@ impl SequenceFlow {
             source_ref: json.source_ref,
             target_ref: json.target_ref,
             condition_expression: json.condition_expression.map(ConditionExpression::from_json),
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonSequenceFlow {
+        BpmnJsonSequenceFlow {
+            base: BpmnJsonElementBase {
+                id: self.id.clone(),
+                name: self.name.clone(),
+                documentation: None,
+            },
+            source_ref: self.source_ref.clone(),
+            target_ref: self.target_ref.clone(),
+            condition_expression: self.condition_expression.as_ref().map(ConditionExpression::to_json),
         }
     }
 }
@@ -432,6 +630,24 @@ impl EventDefinition {
             BpmnJsonEventDefinition::None => EventDefinition::None,
         }
     }
+
+    pub fn to_json(&self) -> BpmnJsonEventDefinition {
+        match self {
+            EventDefinition::Message { message_ref } => BpmnJsonEventDefinition::Message { message_ref: message_ref.clone() },
+            EventDefinition::Timer { time_definition } => BpmnJsonEventDefinition::Timer { time_definition: time_definition.clone() },
+            EventDefinition::Signal { signal_ref } => BpmnJsonEventDefinition::Signal { signal_ref: signal_ref.clone() },
+            EventDefinition::Error { error_ref } => BpmnJsonEventDefinition::Error { error_ref: error_ref.clone() },
+            EventDefinition::Escalation { escalation_ref } => BpmnJsonEventDefinition::Escalation { escalation_ref: escalation_ref.clone() },
+            EventDefinition::Cancel => BpmnJsonEventDefinition::Cancel,
+            EventDefinition::Compensation { activity_ref } => BpmnJsonEventDefinition::Compensation { activity_ref: activity_ref.clone() },
+            EventDefinition::Conditional { condition } => BpmnJsonEventDefinition::Conditional {
+                condition: condition.as_ref().map(ConditionExpression::to_json),
+            },
+            EventDefinition::Link { name } => BpmnJsonEventDefinition::Link { name: name.clone() },
+            EventDefinition::Terminate => BpmnJsonEventDefinition::Terminate,
+            EventDefinition::None => BpmnJsonEventDefinition::None,
+        }
+    }
 }
 
 /// Condition Expression
@@ -448,6 +664,13 @@ impl ConditionExpression {
             body: json.body,
         }
     }
+
+    pub fn to_json(&self) -> BpmnJsonConditionExpression {
+        BpmnJsonConditionExpression {
+            language: self.language.clone(),
+            body: self.body.clone(),
+        }
+    }
 }
 
 /// Input/Output Mapping
@@ -462,6 +685,13 @@ impl IoMapping {
         Self {
             input_parameters: json.input_parameters.into_iter().map(IoParameter::from_json).collect(),
             output_parameters: json.output_parameters.into_iter().map(IoParameter::from_json).collect(),
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonIoMapping {
+        BpmnJsonIoMapping {
+            input_parameters: self.input_parameters.iter().map(IoParameter::to_json).collect(),
+            output_parameters: self.output_parameters.iter().map(IoParameter::to_json).collect(),
         }
     }
 }
@@ -484,6 +714,15 @@ impl IoParameter {
             value: json.value,
         }
     }
+
+    pub fn to_json(&self) -> BpmnJsonIoParameter {
+        BpmnJsonIoParameter {
+            name: self.name.clone(),
+            source: self.source.clone(),
+            target: self.target.clone(),
+            value: self.value.clone(),
+        }
+    }
 }
 
 /// Assignment
@@ -498,6 +737,13 @@ impl Assignment {
         Self {
             assignment_type: json.assignment_type,
             value: json.value,
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonAssignment {
+        BpmnJsonAssignment {
+            assignment_type: self.assignment_type.clone(),
+            value: self.value.clone(),
         }
     }
 }

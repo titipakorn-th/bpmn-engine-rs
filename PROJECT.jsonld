@@ -45,6 +45,9 @@
   "capability": [
     "https://example.org/bpmn-engine/capability/process-execution",
     "https://example.org/bpmn-engine/capability/bpmn-parsing",
+    "https://example.org/bpmn-engine/capability/bpmn-xml-parsing",
+    "https://example.org/bpmn-engine/capability/format-detection",
+    "https://example.org/bpmn-engine/capability/bpmn-serialization",
     "https://example.org/bpmn-engine/capability/activity-management",
     "https://example.org/bpmn-engine/capability/token-flow-control",
     "https://example.org/bpmn-engine/capability/plugin-system",
@@ -55,6 +58,11 @@
   
   "activity": [
     "https://example.org/bpmn-engine/activity/parse-bpmn-json",
+    "https://example.org/bpmn-engine/activity/parse-bpmn-xml",
+    "https://example.org/bpmn-engine/activity/detect-bpmn-format",
+    "https://example.org/bpmn-engine/activity/parse-bpmn-auto",
+    "https://example.org/bpmn-engine/activity/serialize-to-json",
+    "https://example.org/bpmn-engine/activity/serialize-to-xml",
     "https://example.org/bpmn-engine/activity/execute-process",
     "https://example.org/bpmn-engine/activity/manage-instance",
     "https://example.org/bpmn-engine/activity/execute-task",

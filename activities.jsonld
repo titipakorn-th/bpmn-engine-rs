@@ -32,6 +32,82 @@
       "performer": "https://example.org/bpmn-engine/performer/parser"
     },
     {
+      "id": "https://example.org/bpmn-engine/activity/parse-bpmn-xml",
+      "type": "bpmn:Activity",
+      "name": "Parse BPMN XML",
+      "description": "Parse BPMN 2.0 XML format definition into internal process model representation.",
+      "capability": ["https://example.org/bpmn-engine/capability/bpmn-xml-parsing"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "bpmn_xml", "type": "xsd:string"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "process_model", "type": "bpmn:ProcessModel"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/detect-bpmn-format",
+      "type": "bpmn:Activity",
+      "name": "Detect BPMN Format",
+      "description": "Detect the format (JSON/XML) of input BPMN data with confidence score.",
+      "capability": ["https://example.org/bpmn-engine/capability/format-detection"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "input_data", "type": "xsd:string"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "format", "type": "xsd:string"},
+        {"@id": "bpmn:Output", "name": "confidence", "type": "xsd:double"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/parse-bpmn-auto",
+      "type": "bpmn:Activity",
+      "name": "Parse BPMN Auto",
+      "description": "Automatically detect format and parse BPMN definition (supports both JSON and XML).",
+      "capability": [
+        "https://example.org/bpmn-engine/capability/format-detection",
+        "https://example.org/bpmn-engine/capability/bpmn-parsing",
+        "https://example.org/bpmn-engine/capability/bpmn-xml-parsing"
+      ],
+      "input": [
+        {"@id": "bpmn:Input", "name": "input_data", "type": "xsd:string"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "process_model", "type": "bpmn:ProcessModel"},
+        {"@id": "bpmn:Output", "name": "detected_format", "type": "xsd:string"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/serialize-to-json",
+      "type": "bpmn:Activity",
+      "name": "Serialize to JSON",
+      "description": "Serialize ProcessDefinition to BPMN 2.0 JSON format.",
+      "capability": ["https://example.org/bpmn-engine/capability/bpmn-serialization"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "process_model", "type": "bpmn:ProcessModel"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "bpmn_json", "type": "xsd:string"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/serialize-to-xml",
+      "type": "bpmn:Activity",
+      "name": "Serialize to XML",
+      "description": "Serialize ProcessDefinition to BPMN 2.0 XML format.",
+      "capability": ["https://example.org/bpmn-engine/capability/bpmn-serialization"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "process_model", "type": "bpmn:ProcessModel"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "bpmn_xml", "type": "xsd:string"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
       "id": "https://example.org/bpmn-engine/activity/execute-process",
       "type": "bpmn:Activity",
       "name": "Execute Process",

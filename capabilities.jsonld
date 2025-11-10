@@ -36,6 +36,38 @@
       "performer": "https://example.org/bpmn-engine/performer/parser"
     },
     {
+      "id": "https://example.org/bpmn-engine/capability/bpmn-xml-parsing",
+      "type": "bpmn:Capability",
+      "name": "BPMN XML Parsing Capability",
+      "description": "Capability to parse and serialize BPMN 2.0 XML format definitions, converting between XML and internal process model representation.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/parse-bpmn-xml"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/capability/format-detection",
+      "type": "bpmn:Capability",
+      "name": "Format Detection Capability",
+      "description": "Capability to automatically detect the format (JSON/XML) of BPMN input data and select the appropriate parser.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/detect-bpmn-format",
+        "https://example.org/bpmn-engine/activity/parse-bpmn-auto"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/capability/bpmn-serialization",
+      "type": "bpmn:Capability",
+      "name": "BPMN Serialization Capability",
+      "description": "Capability to serialize internal process model representation to BPMN 2.0 JSON or XML format.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/serialize-to-json",
+        "https://example.org/bpmn-engine/activity/serialize-to-xml"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/parser"
+    },
+    {
       "id": "https://example.org/bpmn-engine/capability/activity-management",
       "type": "bpmn:Capability",
       "name": "Activity Management Capability",
