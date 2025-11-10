@@ -111,6 +111,78 @@
         {"@id": "bpmn:Output", "name": "event_result", "type": "bpmn:EventResult"}
       ],
       "performer": "https://example.org/bpmn-engine/performer/activity-executor"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/register-plugin",
+      "type": "bpmn:Activity",
+      "name": "Register Plugin",
+      "description": "Register a plugin to extend engine functionality with custom activity factories and behaviors.",
+      "capability": ["https://example.org/bpmn-engine/capability/plugin-system"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "plugin", "type": "bpmn:Plugin"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "registration_result", "type": "bpmn:RegistrationResult"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/engine"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/register-listener",
+      "type": "bpmn:Activity",
+      "name": "Register Listener",
+      "description": "Register a process execution listener to receive events during process execution.",
+      "capability": ["https://example.org/bpmn-engine/capability/listener-hooks"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "listener", "type": "bpmn:ProcessListener"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "registration_result", "type": "bpmn:RegistrationResult"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/engine"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/persist-instance",
+      "type": "bpmn:Activity",
+      "name": "Persist Instance",
+      "description": "Persist a process instance to the repository (currently in-memory, designed for future database integration).",
+      "capability": ["https://example.org/bpmn-engine/capability/persistence-abstraction"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "instance", "type": "bpmn:ProcessInstance"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "persistence_result", "type": "bpmn:PersistenceResult"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/repository"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/run-tests",
+      "type": "bpmn:Activity",
+      "name": "Run Tests",
+      "description": "Execute test suites including unit tests (64 tests), integration tests (4 tests), and doc tests (1 test).",
+      "capability": ["https://example.org/bpmn-engine/capability/test-infrastructure"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "test_suite", "type": "xsd:string"},
+        {"@id": "bpmn:Input", "name": "test_filter", "type": "xsd:string"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "test_results", "type": "bpmn:TestResults"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/test-framework"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/activity/generate-coverage",
+      "type": "bpmn:Activity",
+      "name": "Generate Coverage",
+      "description": "Generate code coverage report using cargo-llvm-cov, targeting 100% coverage.",
+      "capability": ["https://example.org/bpmn-engine/capability/test-infrastructure"],
+      "input": [
+        {"@id": "bpmn:Input", "name": "output_format", "type": "xsd:string"},
+        {"@id": "bpmn:Input", "name": "output_path", "type": "xsd:string"}
+      ],
+      "output": [
+        {"@id": "bpmn:Output", "name": "coverage_report", "type": "bpmn:CoverageReport"}
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/test-framework"
     }
   ]
 }

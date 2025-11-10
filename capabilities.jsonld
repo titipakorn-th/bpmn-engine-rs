@@ -56,6 +56,47 @@
         "https://example.org/bpmn-engine/activity/manage-instance"
       ],
       "performer": "https://example.org/bpmn-engine/performer/engine"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/capability/plugin-system",
+      "type": "bpmn:Capability",
+      "name": "Plugin System Capability",
+      "description": "Capability to extend engine functionality through plugins, allowing custom activity factories and behavior.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/register-plugin"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/engine"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/capability/listener-hooks",
+      "type": "bpmn:Capability",
+      "name": "Listener Hooks Capability",
+      "description": "Capability to register and execute listeners for process execution events (start, complete, fail, activity events).",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/register-listener"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/engine"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/capability/persistence-abstraction",
+      "type": "bpmn:Capability",
+      "name": "Persistence Abstraction Capability",
+      "description": "Capability to persist and retrieve process instances through abstracted repository interface, currently implemented as in-memory storage with future database integration support.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/persist-instance"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/repository"
+    },
+    {
+      "id": "https://example.org/bpmn-engine/capability/test-infrastructure",
+      "type": "bpmn:Capability",
+      "name": "Test Infrastructure Capability",
+      "description": "Capability to run comprehensive test suites (unit tests, integration tests, property-based tests) and generate coverage reports with 100% coverage target.",
+      "activity": [
+        "https://example.org/bpmn-engine/activity/run-tests",
+        "https://example.org/bpmn-engine/activity/generate-coverage"
+      ],
+      "performer": "https://example.org/bpmn-engine/performer/test-framework"
     }
   ]
 }

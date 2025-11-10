@@ -27,12 +27,20 @@
   "id": "https://example.org/bpmn-engine/project",
   "type": "bpmn:Project",
   "name": "BPMN Engine Rust Implementation",
-  "description": "BPMN 2.0 execution engine implemented in Rust, based on bpmn-engine npm package. Supports BPMN 2.0 JSON format as standard I/O, designed as a Rust crate with future GraphQL API and persistence layer integration.",
+  "description": "BPMN 2.0 execution engine implemented in Rust, based on bpmn-engine npm package. Supports BPMN 2.0 JSON format as standard I/O, designed as a Rust crate with future GraphQL API and persistence layer integration. Includes comprehensive test suite with 100% coverage target.",
   "version": "0.1.0",
-  "goal": "Provide a high-performance, type-safe BPMN 2.0 execution engine for Rust applications, with activity/capability-based design following DoDAF v2 DM2 principles.",
+  "goal": "Provide a high-performance, type-safe BPMN 2.0 execution engine for Rust applications, with activity/capability-based design following DoDAF v2 DM2 principles. Maintain 100% test coverage through TDD practices.",
   "status": "completed",
   "createdAt": "2025-01-27T00:00:00+09:00",
-  "updatedAt": "2025-11-10T06:54:02+09:00",
+  "updatedAt": "2025-11-10T07:03:00+09:00",
+  "license": "Apache-2.0",
+  "testCoverage": {
+    "target": 100,
+    "current": 68,
+    "unitTests": 64,
+    "integrationTests": 4,
+    "docTests": 1
+  },
   
   "capability": [
     "https://example.org/bpmn-engine/capability/process-execution",
@@ -41,7 +49,8 @@
     "https://example.org/bpmn-engine/capability/token-flow-control",
     "https://example.org/bpmn-engine/capability/plugin-system",
     "https://example.org/bpmn-engine/capability/listener-hooks",
-    "https://example.org/bpmn-engine/capability/persistence-abstraction"
+    "https://example.org/bpmn-engine/capability/persistence-abstraction",
+    "https://example.org/bpmn-engine/capability/test-infrastructure"
   ],
   
   "activity": [
@@ -53,7 +62,9 @@
     "https://example.org/bpmn-engine/activity/handle-event",
     "https://example.org/bpmn-engine/activity/register-plugin",
     "https://example.org/bpmn-engine/activity/register-listener",
-    "https://example.org/bpmn-engine/activity/persist-instance"
+    "https://example.org/bpmn-engine/activity/persist-instance",
+    "https://example.org/bpmn-engine/activity/run-tests",
+    "https://example.org/bpmn-engine/activity/generate-coverage"
   ],
   
   "performer": [
@@ -80,6 +91,12 @@
       "@type": "bpmn:System",
       "name": "Repository",
       "description": "Persistence layer for process instances"
+    },
+    {
+      "@id": "https://example.org/bpmn-engine/performer/test-framework",
+      "@type": "bpmn:System",
+      "name": "Test Framework",
+      "description": "Test infrastructure for unit tests, integration tests, and coverage measurement"
     }
   ]
 }
