@@ -58,7 +58,7 @@ pub enum ActivityResult {
 /// Activity Error
 ///
 /// Error that occurred during activity execution.
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, Clone, thiserror::Error)]
 pub enum ActivityError {
     #[error("Activity execution failed: {0}")]
     ExecutionFailed(String),

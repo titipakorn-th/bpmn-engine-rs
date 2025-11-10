@@ -26,7 +26,7 @@
 //!   "elements": []
 //! }"#)?;
 //!
-//! let instance = engine.start_process(definition).await?;
+//! let instance = engine.start_process(definition, None).await?;
 //! # Ok(())
 //! # }
 //! ```
@@ -40,5 +40,7 @@ pub mod repository;
 
 pub use engine::{Engine, EngineBuilder, EngineError};
 pub use engine::instance::ProcessInstance;
+pub use engine::context::ExecutionContext;
 pub use model::ProcessDefinition;
+pub use activity::{Activity, ActivityError, ActivityResult, ProcessListener, ActivityFactory, DefaultActivityFactory};
 

@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 authors = ["gftdcojp"]
 description = "BPMN 2.0 execution engine for Rust"
-license = "MIT"
+license = "Apache-2.0"
 repository = "https://github.com/gftdcojp/bpmn-engine-ts"
 
 [lib]
@@ -38,4 +38,7 @@ uuid = { version = "1", features = ["v4"] }
 
 [dev-dependencies]
 tokio-test = "0.4"
+mockall = "0.13"
+proptest = "1.5"
+test-log = "0.2"
 
