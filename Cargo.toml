@@ -2,12 +2,12 @@
 name = "bpmn-engine"
 version = "0.1.0"
 edition = "2021"
-authors = ["gftdcojp"]
-description = "BPMN 2.0 execution engine for Rust with JSON and XML format support"
+authors = ["titipakorn-th"]
+description = "BPMN 2.0 execution engine for Rust with condition evaluation, parallel gateway support, and JSON/XML format support"
 license = "Apache-2.0"
-repository = "https://github.com/gftdcojp/bpmn-engine-ts"
+repository = "https://github.com/titipakorn-th/bpmn-engine-rs"
 readme = "README.md"
-keywords = ["bpmn", "workflow", "process", "engine", "execution", "xml", "json"]
+keywords = ["bpmn", "workflow", "process", "engine", "execution", "xml", "json", "bpmn2"]
 categories = ["algorithms", "concurrency"]
 
 [lib]

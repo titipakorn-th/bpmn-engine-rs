@@ -1,92 +1,120 @@
 # BPMN Engine Rust
 
-BPMN 2.0 execution engine for Rust, based on [bpmn-engine](https://www.npmjs.com/package/bpmn-engine) npm package.
+BPMN 2.0 execution engine for Rust with support for condition evaluation, parallel gateways, and JSON/XML format parsing.
 
 ## Features
 
-- BPMN 2.0 JSON and XML format support (standard I/O)
-- Automatic format detection (JSON/XML)
-- Bidirectional conversion (JSON ↔ XML ↔ Internal Model)
-- Activity/Capability-based design following DoDAF v2 DM2 principles
-- High-performance, type-safe execution engine
-- Extensible architecture for custom tasks and listeners
-- Future-ready for GraphQL API and persistence layer integration
-- 100% test coverage (TDD)
+### Core BPMN 2.0 Elements
+- **Events**: StartEvent, EndEvent, IntermediateCatchEvent, IntermediateThrowEvent
+- **Tasks**: ServiceTask, UserTask, ScriptTask, ManualTask
+- **Gateways**:
+  - **Exclusive Gateway** — XOR routing with condition evaluation
+  - **Parallel Gateway** — AND-split/join with token tracking
+  - **Inclusive Gateway** — Multi-condition routing
 
-## Design
+### Condition Expression Evaluation
+Supports expressions in the format `fieldPath operator value`:
+```rust
+// Examples
+"status = approved"
+"estimated_sales > 10000"
+"tags contains urgent"
+"site.region = South"
+```
 
-This project follows Semantic Driven Development principles with:
-- DoDAF v2 DM2-based OWL design files
-- Activity/Capability modeling
-- JSON-LD semantic annotations
+### Parallel Gateway Token Tracking
+The engine tracks tokens for parallel gateway joins — waiting for all incoming branches to complete before proceeding through the join.
 
-See `PROJECT.jsonld`, `capabilities.jsonld`, and `activities.jsonld` for design documentation.
+### Format Support
+- **JSON** — Full parsing and serialization
+- **XML** — Full parsing and serialization with namespace support
+- **Auto-detection** — Automatically detects format and parses accordingly
+
+### Architecture
+- Activity/Capability-based design
+- Extensible listener system for process monitoring
+- Async execution support via Tokio
+
+## Installation
+
+```toml
+[dependencies]
+bpmn-engine = "0.1.0"
+```
+
+Or use a local path:
+```toml
+[dependencies]
+bpmn-engine = { path = "./vendor/bpmn-engine" }
+```
+
+## Usage
+
+### Parse and Execute a Process
+```rust
+use bpmn_engine::{Engine, ProcessDefinition};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let xml = r#"<?xml version="1.0"?>
+    <definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL">
+      <process id="process1" isExecutable="true">
+        <startEvent id="StartEvent_1"/>
+        <userTask id="Task_1" name="Review"/>
+        <endEvent id="EndEvent_1"/>
+        <sequenceFlow id="F1" sourceRef="StartEvent_1" targetRef="Task_1"/>
+        <sequenceFlow id="F2" sourceRef="Task_1" targetRef="EndEvent_1"/>
+      </process>
+    </definitions>"#;
+
+    let definition = ProcessDefinition::from_xml(xml)?;
+    let engine = Engine::new();
+
+    // Start process with initial variables
+    let instance = engine.start_process(definition, None).await?;
+    println!("Started: {}", instance.id());
+
+    Ok(())
+}
+```
+
+### Condition Evaluation
+```rust
+// Exclusive gateway with conditions
+// XML: <conditionExpression>status = approved</conditionExpression>
+
+let mut context = ExecutionContext::new(definition, "instance_1".to_string());
+context.set_variable("status".to_string(), serde_json::json!("approved"));
+
+// Gateway evaluates conditions against context.variables
+```
+
+### Parallel Gateway Join
+```rust
+// When a parallel gateway acts as a join (N incoming flows):
+// - First branch arrives → gateway returns Waiting
+// - Second branch arrives → tokens tracked
+// - All branches arrive → gateway proceeds to outgoing
+```
 
 ## Testing
 
-The project maintains 100% test coverage with comprehensive test suites:
-
-- **Unit Tests**: 74 tests covering all modules (including XML parsing/serialization)
-- **Integration Tests**: 4 tests for end-to-end process execution
-- **Test Infrastructure**: Mock implementations, fixtures, and builders
-
-Run tests:
 ```bash
 cargo test
 ```
 
-Generate coverage report:
-```bash
-make test-coverage
-```
-
 ## Status
 
-✅ Core implementation completed
-✅ XML format support completed
-✅ Format detection and auto-parsing implemented
-✅ JSON/XML serialization implemented
-✅ Test infrastructure setup completed
-✅ 79 tests passing (74 unit + 4 integration + 1 doc)
-
-## Usage
-
-### Parse BPMN JSON
-```rust
-use bpmn_engine::model::ProcessDefinition;
-
-let json = r#"{"id":"process1","processType":"process","isExecutable":true,"elements":[]}"#;
-let definition = ProcessDefinition::from_json(json)?;
-```
-
-### Parse BPMN XML
-```rust
-use bpmn_engine::model::ProcessDefinition;
-
-let xml = r#"<?xml version="1.0"?>
-<bpmn2:definitions xmlns:bpmn2="http://www.omg.org/spec/BPMN/20100524/MODEL">
-  <bpmn2:process id="process1" isExecutable="true">
-    <bpmn2:startEvent id="start" />
-  </bpmn2:process>
-</bpmn2:definitions>"#;
-let definition = ProcessDefinition::from_xml(xml)?;
-```
-
-### Auto-detect Format
-```rust
-use bpmn_engine::model::ProcessDefinition;
-
-let input = "..." // JSON or XML
-let (definition, format) = ProcessDefinition::from_auto(input)?;
-```
-
-### Serialize to JSON/XML
-```rust
-let json = definition.to_json()?;
-let xml = definition.to_xml()?;
-```
+| Feature | Status |
+|---------|--------|
+| XML/JSON Parsing | ✅ Complete |
+| Condition Evaluation | ✅ Complete |
+| Parallel Gateway AND-join | ✅ Complete |
+| Exclusive Gateway | ✅ Complete |
+| Inclusive Gateway | ✅ Complete |
+| User Task (Waiting) | ✅ Complete |
+| ProcessListener | 🚧 In Progress |
 
 ## License
 
 Apache-2.0
-
