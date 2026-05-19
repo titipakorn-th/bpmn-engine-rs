@@ -35,6 +35,13 @@ pub struct SignalData {
     pub has_signal_event: bool,
 }
 
+/// Escalation data collected during parsing
+#[derive(Debug, Clone, Default)]
+pub struct EscalationData {
+    pub escalation_ref: Option<String>,
+    pub has_escalation_event: bool,
+}
+
 /// Data association collected during parsing
 #[derive(Debug, Clone, Default)]
 pub struct DataAssociationData {
@@ -62,6 +69,13 @@ pub struct MultiInstanceData {
     pub loop_cardinality: Option<i32>,
     pub completion_condition: Option<String>,
     pub behavior: Option<String>,
+}
+
+/// Extension Elements data collected during parsing
+#[derive(Debug, Clone, Default)]
+pub struct ExtensionElementsData {
+    pub properties: HashMap<String, String>,
+    pub current_key: Option<String>,
 }
 
 /// Helper function to extract attributes from XML element
@@ -107,10 +121,12 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
     let mut current_event_name: Option<String> = None;
     let mut timer_data: TimerData = TimerData::default();
     let mut signal_data: SignalData = SignalData::default();
+    let mut escalation_data: EscalationData = EscalationData::default();
     let mut call_activity_data: CallActivityData = CallActivityData::default();
     let mut current_call_activity_id: Option<String> = None;
     let mut current_call_activity_name: Option<String> = None;
     let mut multi_instance_data: MultiInstanceData = MultiInstanceData::default();
+    let mut extension_elements_data: ExtensionElementsData = ExtensionElementsData::default();
     let mut current_task_id: Option<String> = None;
     let mut current_task_type: Option<String> = None;
 
@@ -155,6 +171,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                     current_event_name = attrs.get("name").cloned();
                     timer_data = TimerData::default();
                     signal_data = SignalData::default();
+                    escalation_data = EscalationData::default();
                     element_stack.push("intermediateCatchEvent".to_string());
                 }
                 // Intermediate Throw Event
@@ -162,6 +179,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                     current_event_id = attrs.get("id").cloned();
                     current_event_name = attrs.get("name").cloned();
                     signal_data = SignalData::default();
+                    escalation_data = EscalationData::default();
                     element_stack.push("intermediateThrowEvent".to_string());
                 }
                 // Timer Event Definition
@@ -189,6 +207,14 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                     }
                     element_stack.push("signalEventDefinition".to_string());
                 }
+                // Escalation Event Definition
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:escalationEventDefinition", b"bpmn:escalationEventDefinition", b"escalationEventDefinition"]) {
+                    escalation_data.has_escalation_event = true;
+                    if let Some(escalation_ref) = attrs.get("escalationRef") {
+                        escalation_data.escalation_ref = Some(escalation_ref.clone());
+                    }
+                    element_stack.push("escalationEventDefinition".to_string());
+                }
                 // Service Task
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
                     current_task_id = attrs.get("id").cloned();
@@ -202,6 +228,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 implementation: attrs.get("implementation").cloned(),
                                 operation_ref: attrs.get("operationRef").cloned(),
@@ -225,6 +252,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 assignment: None,
                                 form_key: attrs.get("formKey").cloned(),
@@ -247,6 +275,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 script_format: attrs.get("scriptFormat").cloned(),
                                 script: None,
@@ -266,6 +295,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                             }),
                         );
@@ -281,6 +311,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 default_flow: attrs.get("default").cloned(),
                             }),
@@ -297,6 +328,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 default_flow: attrs.get("default").cloned(),
                                 gateway_direction: crate::engine::context::GatewayDirection::Unknown,
@@ -314,6 +346,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 default_flow: attrs.get("default").cloned(),
                             }),
@@ -330,6 +363,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 data_state: attrs.get("dataState").cloned(),
                             }),
@@ -346,6 +380,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 data_object_ref: attrs.get("dataObjectRef").cloned(),
                             }),
@@ -362,6 +397,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 input_set: attrs.get("inputSet").cloned(),
                             }),
@@ -378,6 +414,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 output_set: attrs.get("outputSet").cloned(),
                             }),
@@ -456,6 +493,24 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:completionCondition", b"bpmn:completionCondition", b"completionCondition"]) {
                     element_stack.push("completionCondition".to_string());
                 }
+                // Extension Elements
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:extensionElements", b"bpmn:extensionElements", b"extensionElements"]) {
+                    extension_elements_data = ExtensionElementsData::default();
+                    element_stack.push("extensionElements".to_string());
+                }
+                // Any child element under extensionElements (custom extension property)
+                else if element_stack.contains(&"extensionElements".to_string()) {
+                    // This is a custom extension element (e.g., custom:formKey)
+                    // Extract the local name (without namespace prefix)
+                    let name_str = String::from_utf8_lossy(name.as_ref()).to_string();
+                    // Remove namespace prefix if present (e.g., "custom:formKey" -> "formKey")
+                    let local_name = if name_str.contains(':') {
+                        name_str.split(':').last().unwrap_or(&name_str).to_string()
+                    } else {
+                        name_str
+                    };
+                    extension_elements_data.current_key = Some(local_name);
+                }
             }
             Ok(Event::Empty(e)) => {
                 // Handle self-closing elements (empty elements like <element />)
@@ -479,6 +534,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 implementation: attrs.get("implementation").cloned(),
                                 operation_ref: attrs.get("operationRef").cloned(),
@@ -501,6 +557,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 assignment: None,
                                 form_key: attrs.get("formKey").cloned(),
@@ -523,6 +580,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 script_format: attrs.get("scriptFormat").cloned(),
                                 script: None,
@@ -542,6 +600,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                             }),
                         );
@@ -557,6 +616,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 default_flow: attrs.get("default").cloned(),
                             }),
@@ -573,6 +633,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 default_flow: attrs.get("default").cloned(),
                                 gateway_direction: crate::engine::context::GatewayDirection::Unknown,
@@ -590,6 +651,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 default_flow: attrs.get("default").cloned(),
                             }),
@@ -606,6 +668,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 data_state: attrs.get("dataState").cloned(),
                             }),
@@ -622,6 +685,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 data_object_ref: attrs.get("dataObjectRef").cloned(),
                             }),
@@ -638,6 +702,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 input_set: attrs.get("inputSet").cloned(),
                             }),
@@ -654,6 +719,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 output_set: attrs.get("outputSet").cloned(),
                             }),
@@ -670,6 +736,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: id.clone(),
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 called_element: attrs.get("calledElement").cloned(),
                                 business_key: attrs.get("businessKey").cloned(),
@@ -689,6 +756,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: event_id,
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 event_definition: None,
                             }),
@@ -705,6 +773,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: event_id,
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 event_definition: None,
                             }),
@@ -744,6 +813,12 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                     // Handle completionCondition text
                     else if element_stack.last().map(|s| s.as_str()) == Some("completionCondition") {
                         multi_instance_data.completion_condition = Some(text);
+                    }
+                    // Handle extension element text (custom property value)
+                    else if element_stack.contains(&"extensionElements".to_string()) {
+                        if let Some(ref key) = extension_elements_data.current_key {
+                            extension_elements_data.properties.insert(key.clone(), text);
+                        }
                     }
                 }
             }
@@ -786,6 +861,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: event_id,
                                     name: current_event_name.take(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 event_definition: event_def,
                             }),
@@ -816,6 +892,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: event_id,
                                     name: current_event_name.take(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 event_definition: event_def,
                             }),
@@ -835,6 +912,8 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                             })
                         } else if signal_data.has_signal_event {
                             Some(EventDefinition::Signal { signal_ref: signal_data.signal_ref.clone() })
+                        } else if escalation_data.has_escalation_event {
+                            Some(EventDefinition::Escalation { escalation_ref: escalation_data.escalation_ref.clone() })
                         } else {
                             None
                         };
@@ -846,6 +925,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: event_id,
                                     name: current_event_name.take(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 event_definition: event_def,
                             }),
@@ -853,14 +933,17 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                     }
                     timer_data = TimerData::default();
                     signal_data = SignalData::default();
+                    escalation_data = EscalationData::default();
                     element_stack.clear();
                 }
                 // Handle closing of Intermediate Throw Event
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateThrowEvent", b"bpmn:intermediateThrowEvent", b"intermediateThrowEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
-                        // Check if signalEventDefinition was encountered (signal_data was modified)
+                        // Check if signalEventDefinition or escalationEventDefinition was encountered
                         let event_def = if signal_data.has_signal_event {
                             Some(EventDefinition::Signal { signal_ref: signal_data.signal_ref.clone() })
+                        } else if escalation_data.has_escalation_event {
+                            Some(EventDefinition::Escalation { escalation_ref: escalation_data.escalation_ref.clone() })
                         } else {
                             None
                         };
@@ -872,6 +955,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: event_id,
                                     name: current_event_name.take(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 event_definition: event_def,
                             }),
@@ -917,6 +1001,11 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:multiInstanceLoopCharacteristics", b"bpmn:multiInstanceLoopCharacteristics", b"multiInstanceLoopCharacteristics"]) {
                     element_stack.pop();
                 }
+                // Handle closing of extensionElements
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:extensionElements", b"bpmn:extensionElements", b"extensionElements"]) {
+                    element_stack.pop();
+                    extension_elements_data.current_key = None;
+                }
                 // Handle closing of serviceTask
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
                     if let Some(task_id) = current_task_id.take() {
@@ -933,8 +1022,18 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 });
                             }
                         }
+                        // Attach extension elements if any were parsed
+                        if !extension_elements_data.properties.is_empty() || extension_elements_data.current_key.is_some() {
+                            if let Some(ProcessElement::ServiceTask(ref mut task)) = elements.get_mut(&task_id) {
+                                task.base.extension_elements = Some(ExtensionElements {
+                                    properties: extension_elements_data.properties.clone(),
+                                    documentation: None,
+                                });
+                            }
+                        }
                     }
                     multi_instance_data = MultiInstanceData::default();
+                    extension_elements_data = ExtensionElementsData::default();
                     current_task_type = None;
                     element_stack.retain(|e| e != "serviceTask" && e != "multiInstanceLoopCharacteristics");
                 }
@@ -954,8 +1053,18 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 });
                             }
                         }
+                        // Attach extension elements if any were parsed
+                        if !extension_elements_data.properties.is_empty() || extension_elements_data.current_key.is_some() {
+                            if let Some(ProcessElement::UserTask(ref mut task)) = elements.get_mut(&task_id) {
+                                task.base.extension_elements = Some(ExtensionElements {
+                                    properties: extension_elements_data.properties.clone(),
+                                    documentation: None,
+                                });
+                            }
+                        }
                     }
                     multi_instance_data = MultiInstanceData::default();
+                    extension_elements_data = ExtensionElementsData::default();
                     current_task_type = None;
                     element_stack.retain(|e| e != "userTask" && e != "multiInstanceLoopCharacteristics");
                 }
@@ -975,8 +1084,18 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 });
                             }
                         }
+                        // Attach extension elements if any were parsed
+                        if !extension_elements_data.properties.is_empty() || extension_elements_data.current_key.is_some() {
+                            if let Some(ProcessElement::ScriptTask(ref mut task)) = elements.get_mut(&task_id) {
+                                task.base.extension_elements = Some(ExtensionElements {
+                                    properties: extension_elements_data.properties.clone(),
+                                    documentation: None,
+                                });
+                            }
+                        }
                     }
                     multi_instance_data = MultiInstanceData::default();
+                    extension_elements_data = ExtensionElementsData::default();
                     current_task_type = None;
                     element_stack.retain(|e| e != "scriptTask" && e != "multiInstanceLoopCharacteristics");
                 }
@@ -990,6 +1109,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     id: call_id,
                                     name: current_call_activity_name.take(),
                                     documentation: None,
+                                    extension_elements: None,
                                 },
                                 called_element: call_activity_data.called_element.clone(),
                                 business_key: call_activity_data.business_key.clone(),

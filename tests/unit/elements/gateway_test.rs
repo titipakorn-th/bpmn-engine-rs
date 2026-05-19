@@ -14,6 +14,7 @@ async fn test_exclusive_gateway_activity_via_factory() {
             id: "gateway1".to_string(),
             name: Some("Exclusive Gateway".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         default_flow: None,
     });
@@ -61,6 +62,7 @@ async fn test_parallel_gateway_activity_via_factory() {
             id: "gateway1".to_string(),
             name: Some("Parallel Gateway".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         default_flow: None,
         gateway_direction: GatewayDirection::Unknown,
@@ -119,6 +121,7 @@ async fn test_inclusive_gateway_activity_via_factory() {
             id: "gateway1".to_string(),
             name: Some("Inclusive Gateway".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         default_flow: None,
     });

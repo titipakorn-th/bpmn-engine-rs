@@ -14,6 +14,7 @@ async fn test_service_task_activity_via_factory() {
             id: "task1".to_string(),
             name: Some("Service Task".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         implementation: Some("webService".to_string()),
         operation_ref: None,
@@ -48,6 +49,7 @@ async fn test_user_task_activity_via_factory() {
             id: "userTask1".to_string(),
             name: Some("User Task".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         assignment: None,
         form_key: None,
@@ -80,6 +82,7 @@ async fn test_manual_task_activity_via_factory() {
             id: "manualTask1".to_string(),
             name: Some("Manual Task".to_string()),
             documentation: None,
+            extension_elements: None,
         },
     });
 
@@ -109,6 +112,7 @@ async fn test_script_task_activity_via_factory() {
             id: "scriptTask1".to_string(),
             name: Some("Script Task".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         script_format: Some("javascript".to_string()),
         script: Some("console.log('test');".to_string()),

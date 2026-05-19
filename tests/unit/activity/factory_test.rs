@@ -14,6 +14,7 @@ fn test_factory_create_start_event_activity() {
             id: "start1".to_string(),
             name: Some("Start".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: None,
     });
@@ -31,6 +32,7 @@ fn test_factory_create_end_event_activity() {
             id: "end1".to_string(),
             name: Some("End".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: None,
     });
@@ -47,6 +49,7 @@ fn test_factory_create_service_task_activity() {
             id: "task1".to_string(),
             name: Some("Task".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         implementation: Some("webService".to_string()),
         operation_ref: None,
@@ -66,6 +69,7 @@ fn test_factory_create_user_task_activity() {
             id: "userTask1".to_string(),
             name: Some("User Task".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         assignment: None,
         form_key: None,
@@ -84,6 +88,7 @@ fn test_factory_create_script_task_activity() {
             id: "scriptTask1".to_string(),
             name: Some("Script Task".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         script_format: Some("javascript".to_string()),
         script: Some("console.log('test');".to_string()),
@@ -102,6 +107,7 @@ fn test_factory_create_manual_task_activity() {
             id: "manualTask1".to_string(),
             name: Some("Manual Task".to_string()),
             documentation: None,
+            extension_elements: None,
         },
     });
 
@@ -117,6 +123,7 @@ fn test_factory_create_exclusive_gateway_activity() {
             id: "gateway1".to_string(),
             name: Some("Gateway".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         default_flow: None,
     });
@@ -133,6 +140,7 @@ fn test_factory_create_parallel_gateway_activity() {
             id: "gateway1".to_string(),
             name: Some("Parallel Gateway".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         default_flow: None,
         gateway_direction: GatewayDirection::Unknown,
@@ -150,6 +158,7 @@ fn test_factory_create_inclusive_gateway_activity() {
             id: "gateway1".to_string(),
             name: Some("Inclusive Gateway".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         default_flow: None,
     });
@@ -166,6 +175,7 @@ fn test_factory_create_intermediate_catch_event_activity() {
             id: "catchEvent1".to_string(),
             name: Some("Catch Event".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: None,
     });
@@ -182,6 +192,7 @@ fn test_factory_create_intermediate_throw_event_activity() {
             id: "throwEvent1".to_string(),
             name: Some("Throw Event".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: None,
     });

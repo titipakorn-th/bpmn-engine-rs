@@ -169,6 +169,7 @@ async fn test_signal_catch_event_activity() {
             id: "catchSignal1".to_string(),
             name: Some("Catch Signal Event".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: Some(EventDefinition::Signal {
             signal_ref: Some("approvalSignal".to_string()),
@@ -206,6 +207,7 @@ async fn test_signal_throw_event_activity() {
             id: "throwSignal1".to_string(),
             name: Some("Throw Signal Event".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: Some(EventDefinition::Signal {
             signal_ref: Some("approvalSignal".to_string()),

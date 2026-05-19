@@ -14,6 +14,7 @@ async fn test_start_event_activity_via_factory() {
             id: "start1".to_string(),
             name: Some("Start".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: None,
     });
@@ -62,6 +63,7 @@ async fn test_end_event_activity_via_factory() {
             id: "end1".to_string(),
             name: Some("End".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: None,
     });
@@ -98,6 +100,7 @@ async fn test_intermediate_catch_event_activity_via_factory() {
             id: "catchEvent1".to_string(),
             name: Some("Catch Event".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: None,
     });
@@ -128,6 +131,7 @@ async fn test_intermediate_throw_event_activity_via_factory() {
             id: "throwEvent1".to_string(),
             name: Some("Throw Event".to_string()),
             documentation: None,
+            extension_elements: None,
         },
         event_definition: None,
     });

@@ -133,6 +133,19 @@ impl Activity for IntermediateCatchEventActivity {
                     ),
                 })
             }
+            Some(EventDefinition::Escalation { escalation_ref }) => {
+                // Escalation catch event - waits for escalation
+                let escalation_key = format!("_escalation_{}", self.event.base.id);
+                let escalation_value = escalation_ref.clone().unwrap_or_else(|| "default".to_string());
+                context.set_variable(escalation_key, serde_json::json!(escalation_value));
+
+                Ok(ActivityResult::Waiting {
+                    reason: format!(
+                        "Escalation '{}' waiting",
+                        self.event.base.id
+                    ),
+                })
+            }
             _ => {
                 Ok(ActivityResult::Waiting {
                     reason: format!(
@@ -177,6 +190,16 @@ impl Activity for IntermediateThrowEventActivity {
             context.set_variable(signal_key, serde_json::json!({
                 "thrown": true,
                 "signalRef": signal_value
+            }));
+        }
+
+        // Escalation throw event - triggers escalation
+        if let Some(EventDefinition::Escalation { escalation_ref }) = &self.event.event_definition {
+            let escalation_key = format!("_escalation_{}", self.event.base.id);
+            let escalation_value = escalation_ref.clone().unwrap_or_else(|| "default".to_string());
+            context.set_variable(escalation_key, serde_json::json!({
+                "thrown": true,
+                "escalationRef": escalation_value
             }));
         }
 

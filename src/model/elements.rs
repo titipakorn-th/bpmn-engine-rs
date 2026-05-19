@@ -269,12 +269,39 @@ impl ProcessElement {
     }
 }
 
+/// Extension Elements
+///
+/// Allows BPMN elements to have custom properties via extensions.
+/// The platform can use these for form fields, custom properties, etc.
+#[derive(Debug, Clone, Default)]
+pub struct ExtensionElements {
+    /// Custom properties (key-value pairs)
+    pub properties: HashMap<String, String>,
+    /// Documentation
+    pub documentation: Option<String>,
+}
+
+impl ExtensionElements {
+    pub fn new() -> Self {
+        Self {
+            properties: HashMap::new(),
+            documentation: None,
+        }
+    }
+
+    pub fn with_property(mut self, key: String, value: String) -> Self {
+        self.properties.insert(key, value);
+        self
+    }
+}
+
 /// Base element properties
 #[derive(Debug, Clone)]
 pub struct ElementBase {
     pub id: String,
     pub name: Option<String>,
     pub documentation: Option<String>,
+    pub extension_elements: Option<ExtensionElements>,
 }
 
 impl ElementBase {
@@ -283,6 +310,7 @@ impl ElementBase {
             id: base.id,
             name: base.name,
             documentation: base.documentation,
+            extension_elements: None,
         }
     }
 }
