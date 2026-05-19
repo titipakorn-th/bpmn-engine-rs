@@ -187,6 +187,10 @@ pub struct BpmnJsonExclusiveGateway {
 pub struct BpmnJsonParallelGateway {
     #[serde(flatten)]
     pub base: BpmnJsonElementBase,
+    /// Default flow ID
+    pub default_flow: Option<String>,
+    /// Gateway direction
+    pub gateway_direction: Option<crate::engine::context::GatewayDirection>,
 }
 
 /// Inclusive Gateway

@@ -202,6 +202,8 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                     name: attrs.get("name").cloned(),
                                     documentation: None,
                                 },
+                                default_flow: attrs.get("default").cloned(),
+                                gateway_direction: crate::engine::context::GatewayDirection::Unknown,
                             }),
                         );
                     }

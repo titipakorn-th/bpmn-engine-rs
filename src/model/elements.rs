@@ -508,12 +508,16 @@ impl ExclusiveGateway {
 #[derive(Debug, Clone)]
 pub struct ParallelGateway {
     pub base: ElementBase,
+    pub default_flow: Option<String>,
+    pub gateway_direction: crate::engine::context::GatewayDirection,
 }
 
 impl ParallelGateway {
     pub fn from_json(json: BpmnJsonParallelGateway) -> Self {
         Self {
             base: ElementBase::from_json(json.base),
+            default_flow: json.default_flow,
+            gateway_direction: json.gateway_direction.unwrap_or(crate::engine::context::GatewayDirection::Unknown),
         }
     }
 
@@ -524,6 +528,8 @@ impl ParallelGateway {
                 name: self.base.name.clone(),
                 documentation: self.base.documentation.clone(),
             },
+            default_flow: self.default_flow.clone(),
+            gateway_direction: Some(self.gateway_direction),
         }
     }
 }

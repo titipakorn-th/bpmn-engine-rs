@@ -116,7 +116,7 @@ pub enum ProcessInstanceState {
 }
 
 /// Gateway Direction (BPMN 2.0)
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum GatewayDirection {
     /// Gateway has diverging output (1 in → N out) — AND/XOR split
     Diverging,
