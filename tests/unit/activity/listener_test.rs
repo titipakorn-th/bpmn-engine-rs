@@ -10,7 +10,7 @@ async fn test_listener_registry_register() {
     let registry = ListenerRegistry::new();
     
     // Create a mock listener
-    let listener = std::sync::Arc::new(crate::helpers::mocks::MockProcessListener::new());
+    let listener = std::sync::Arc::new(crate::helpers::mock_listener::MockProcessListener::new());
     
     registry.register(listener.clone()).await;
     
@@ -22,8 +22,8 @@ async fn test_listener_registry_register() {
 async fn test_listener_registry_multiple_listeners() {
     let registry = ListenerRegistry::new();
     
-    let listener1 = std::sync::Arc::new(crate::helpers::mocks::MockProcessListener::new());
-    let listener2 = std::sync::Arc::new(crate::helpers::mocks::MockProcessListener::new());
+    let listener1 = std::sync::Arc::new(crate::helpers::mock_listener::MockProcessListener::new());
+    let listener2 = std::sync::Arc::new(crate::helpers::mock_listener::MockProcessListener::new());
     
     registry.register(listener1.clone()).await;
     registry.register(listener2.clone()).await;
@@ -34,7 +34,7 @@ async fn test_listener_registry_multiple_listeners() {
 
 #[tokio::test]
 async fn test_mock_listener_on_process_start() {
-    let listener = crate::helpers::mocks::MockProcessListener::new();
+    let listener = crate::helpers::mock_listener::MockProcessListener::new();
     let definition = ProcessDefinition::from_json(r#"
     {
         "id": "process1",
@@ -52,7 +52,7 @@ async fn test_mock_listener_on_process_start() {
 
 #[tokio::test]
 async fn test_mock_listener_on_process_complete() {
-    let listener = crate::helpers::mocks::MockProcessListener::new();
+    let listener = crate::helpers::mock_listener::MockProcessListener::new();
     let definition = ProcessDefinition::from_json(r#"
     {
         "id": "process1",
@@ -70,7 +70,7 @@ async fn test_mock_listener_on_process_complete() {
 
 #[tokio::test]
 async fn test_mock_listener_on_activity_start() {
-    let listener = crate::helpers::mocks::MockProcessListener::new();
+    let listener = crate::helpers::mock_listener::MockProcessListener::new();
     let definition = ProcessDefinition::from_json(r#"
     {
         "id": "process1",
