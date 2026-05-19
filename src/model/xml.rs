@@ -869,10 +869,12 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:startEvent", b"bpmn:startEvent", b"startEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
                         let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
+                            let time_def = timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone());
+                            let timer_def_value = TimerDefinition::from_timer_data(&timer_data);
                             timer_data = TimerData::default();
                             Some(EventDefinition::Timer {
-                                time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
-                                timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
+                                time_definition: time_def,
+                                timer_def: Some(timer_def_value),
                             })
                         } else if signal_data.has_signal_event {
                             Some(EventDefinition::Signal { signal_ref: signal_data.signal_ref.clone() })
@@ -901,9 +903,12 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:endEvent", b"bpmn:endEvent", b"endEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
                         let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
+                            let time_def = timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone());
+                            let timer_def_value = TimerDefinition::from_timer_data(&timer_data);
+                            timer_data = TimerData::default();
                             Some(EventDefinition::Timer {
-                                time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
-                                timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
+                                time_definition: time_def,
+                                timer_def: Some(timer_def_value),
                             })
                         } else if signal_data.has_signal_event {
                             Some(EventDefinition::Signal { signal_ref: signal_data.signal_ref.clone() })
@@ -932,9 +937,12 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateCatchEvent", b"bpmn:intermediateCatchEvent", b"intermediateCatchEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
                         let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
+                            let time_def = timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone());
+                            let timer_def_value = TimerDefinition::from_timer_data(&timer_data);
+                            timer_data = TimerData::default();
                             Some(EventDefinition::Timer {
-                                time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
-                                timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
+                                time_definition: time_def,
+                                timer_def: Some(timer_def_value),
                             })
                         } else if signal_data.has_signal_event {
                             Some(EventDefinition::Signal { signal_ref: signal_data.signal_ref.clone() })
