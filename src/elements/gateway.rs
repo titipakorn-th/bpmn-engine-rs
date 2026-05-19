@@ -4,7 +4,7 @@
 
 use crate::activity::{Activity, ActivityError, ActivityResult};
 use crate::capability::Capability;
-use crate::engine::{ExecutionContext, evaluator::evaluate_condition};
+use crate::engine::{ExecutionContext, GatewayDirection, detect_gateway_direction, evaluator::evaluate_condition};
 use crate::model::{ExclusiveGateway, ParallelGateway, InclusiveGateway};
 use async_trait::async_trait;
 
@@ -98,21 +98,69 @@ impl ParallelGatewayActivity {
 impl Activity for ParallelGatewayActivity {
     async fn execute(&self, context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
         let definition = &context.process_definition;
-        let _incoming_flows = definition.get_incoming_flows(&self.gateway.base.id);
-        let outgoing_flows = definition.get_outgoing_flows(&self.gateway.base.id);
+        let incoming_flows = definition.get_incoming_flows(&self.gateway.base.id);
+        let outgoing_flows: Vec<_> = definition.get_outgoing_flows(&self.gateway.base.id)
+            .iter()
+            .map(|flow| flow.target_ref.clone())
+            .collect();
 
-        // If there are incoming flows, this is a join gateway
-        // For now, we assume this is a split (outgoing flows)
-        if !outgoing_flows.is_empty() {
-            let next_elements: Vec<String> = outgoing_flows
-                .iter()
-                .map(|flow| flow.target_ref.clone())
-                .collect();
-            Ok(ActivityResult::Continue { next_elements })
+        // Determine gateway direction
+        let direction = if self.gateway.gateway_direction != GatewayDirection::Unknown {
+            self.gateway.gateway_direction
         } else {
-            // Join gateway - wait for all incoming tokens
-            // TODO: Implement proper token synchronization
-            Ok(ActivityResult::Completed { output_variables: None })
+            detect_gateway_direction(&self.gateway.base.id, definition)
+        };
+
+        match direction {
+            GatewayDirection::Diverging => {
+                // Split: clear any existing tokens, proceed with all outgoing
+                context.clear_incoming_tokens(&self.gateway.base.id);
+
+                if outgoing_flows.is_empty() {
+                    return Err(ActivityError::ExecutionFailed(
+                        "Parallel gateway has no outgoing flows".to_string(),
+                    ));
+                }
+
+                Ok(ActivityResult::Continue { next_elements: outgoing_flows })
+            }
+            GatewayDirection::Converging | GatewayDirection::Mixed => {
+                // Join: check if all tokens have arrived
+                let required_count = incoming_flows.len();
+
+                if required_count == 0 {
+                    // No incoming flows, treat as diverging
+                    return Ok(ActivityResult::Continue { next_elements: outgoing_flows });
+                }
+
+                // Check if all tokens have arrived
+                if context.all_tokens_arrived(&self.gateway.base.id, required_count) {
+                    // All branches complete, proceed to outgoing
+                    context.clear_incoming_tokens(&self.gateway.base.id);
+
+                    if outgoing_flows.is_empty() {
+                        return Err(ActivityError::ExecutionFailed(
+                            "Parallel gateway has no outgoing flows".to_string(),
+                        ));
+                    }
+
+                    Ok(ActivityResult::Continue { next_elements: outgoing_flows })
+                } else {
+                    // Waiting for more tokens
+                    Ok(ActivityResult::Waiting {
+                        reason: format!(
+                            "Parallel gateway '{}' waiting for {} tokens, {} arrived",
+                            self.gateway.base.id,
+                            required_count,
+                            context.get_incoming_tokens(&self.gateway.base.id).len()
+                        ),
+                    })
+                }
+            }
+            GatewayDirection::Unknown => {
+                // Default to diverging behavior if unknown
+                Ok(ActivityResult::Continue { next_elements: outgoing_flows })
+            }
         }
     }
 
