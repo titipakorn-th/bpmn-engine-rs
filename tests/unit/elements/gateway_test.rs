@@ -1,7 +1,7 @@
 //! Unit tests for Gateway elements
 
 use bpmn_engine::activity::{DefaultActivityFactory, ActivityFactory};
-use bpmn_engine::engine::ExecutionContext;
+use bpmn_engine::engine::{ExecutionContext, GatewayDirection};
 use bpmn_engine::model::{ProcessDefinition, ProcessElement, ElementBase, ExclusiveGateway, ParallelGateway, InclusiveGateway};
 use test_log::test;
 use tokio_test;
@@ -62,6 +62,8 @@ async fn test_parallel_gateway_activity_via_factory() {
             name: Some("Parallel Gateway".to_string()),
             documentation: None,
         },
+        default_flow: None,
+        gateway_direction: GatewayDirection::Unknown,
     });
 
     let activity = factory.create_activity(&gateway).unwrap();

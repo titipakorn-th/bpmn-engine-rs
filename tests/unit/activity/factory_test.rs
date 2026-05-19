@@ -1,6 +1,7 @@
 //! Unit tests for ActivityFactory
 
 use bpmn_engine::activity::{ActivityFactory, DefaultActivityFactory};
+use bpmn_engine::engine::GatewayDirection;
 use bpmn_engine::model::{ProcessElement, StartEvent, EndEvent, ServiceTask, UserTask, ScriptTask, ManualTask, ExclusiveGateway, ParallelGateway, InclusiveGateway, IntermediateCatchEvent, IntermediateThrowEvent};
 use bpmn_engine::model::ElementBase;
 use test_log::test;
@@ -130,6 +131,8 @@ fn test_factory_create_parallel_gateway_activity() {
             name: Some("Parallel Gateway".to_string()),
             documentation: None,
         },
+        default_flow: None,
+        gateway_direction: GatewayDirection::Unknown,
     });
 
     let activity = factory.create_activity(&element).unwrap();
