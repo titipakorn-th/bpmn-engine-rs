@@ -2,9 +2,10 @@
 //!
 //! Core execution engine for BPMN processes.
 
-use crate::activity::{Activity, ActivityError, ActivityFactory, ActivityResult, DefaultActivityFactory};
+use crate::activity::{ActivityError, ActivityFactory, ActivityResult, DefaultActivityFactory};
 use crate::engine::context::ProcessInstanceState;
 use crate::engine::instance::ProcessInstance;
+use crate::engine::{GatewayDirection, detect_gateway_direction, evaluator::evaluate_condition};
 use crate::model::ProcessDefinition;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -172,13 +173,32 @@ impl Engine {
                             let outgoing_flows = definition.get_outgoing_flows(&element_id);
                             let mut next_elements = Vec::new();
 
-                            for flow in outgoing_flows {
+                            for flow in &outgoing_flows {
                                 // Check condition if present
-                                if let Some(_condition) = &flow.condition_expression {
-                                    // TODO: Evaluate condition
-                                    // For now, assume condition is true
+                                if let Some(ref condition) = flow.condition_expression {
+                                    if evaluate_condition(condition, &serde_json::json!(context.variables)) {
+                                        next_elements.push(flow.target_ref.clone());
+                                    }
+                                } else {
+                                    next_elements.push(flow.target_ref.clone());
                                 }
-                                next_elements.push(flow.target_ref.clone());
+                            }
+
+                            // For each target, check if it's a converging parallel gateway and add token
+                            for target_id in &next_elements {
+                                if let Some(target_elem) = definition.get_element(target_id) {
+                                    if let crate::model::ProcessElement::ParallelGateway(pg) = target_elem {
+                                        let direction = if pg.gateway_direction != GatewayDirection::Unknown {
+                                            pg.gateway_direction
+                                        } else {
+                                            detect_gateway_direction(target_id, definition)
+                                        };
+
+                                        if direction == GatewayDirection::Converging || direction == GatewayDirection::Mixed {
+                                            context.add_incoming_token(target_id.clone(), element_id.clone());
+                                        }
+                                    }
+                                }
                             }
 
                             // Check if this is an end event
