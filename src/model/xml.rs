@@ -531,6 +531,25 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                         escalation_data.escalation_ref = Some(escalation_ref.clone());
                     }
                 }
+                // Sequence Flow (empty - no children)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:sequenceFlow", b"bpmn:sequenceFlow", b"sequenceFlow"]) {
+                    if let (Some(id), Some(source), Some(target)) = (
+                        attrs.get("id"),
+                        attrs.get("sourceRef"),
+                        attrs.get("targetRef"),
+                    ) {
+                        flows.insert(
+                            id.clone(),
+                            SequenceFlow {
+                                id: id.clone(),
+                                name: attrs.get("name").cloned(),
+                                source_ref: source.clone(),
+                                target_ref: target.clone(),
+                                condition_expression: None,
+                            },
+                        );
+                    }
+                }
                 // Service Task
                 if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
                     if let Some(id) = attrs.get("id") {
