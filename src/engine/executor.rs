@@ -2,7 +2,7 @@
 //!
 //! Core execution engine for BPMN processes.
 
-use crate::activity::{ActivityError, ActivityFactory, ActivityResult, DefaultActivityFactory};
+use crate::activity::{ActivityError, ActivityFactory, ActivityResult, DefaultActivityFactory, ListenerRegistry, ProcessListener};
 use crate::engine::context::ProcessInstanceState;
 use crate::engine::instance::ProcessInstance;
 use crate::engine::{GatewayDirection, detect_gateway_direction, evaluator::evaluate_condition};
@@ -20,6 +20,8 @@ pub struct Engine {
     instances: Arc<RwLock<HashMap<String, Arc<ProcessInstance>>>>,
     /// Activity factory
     activity_factory: Arc<dyn ActivityFactory>,
+    /// Listener registry
+    listener_registry: Arc<RwLock<ListenerRegistry>>,
 }
 
 impl Engine {
@@ -28,6 +30,7 @@ impl Engine {
         Self {
             instances: Arc::new(RwLock::new(HashMap::new())),
             activity_factory: Arc::new(DefaultActivityFactory::new()),
+            listener_registry: Arc::new(RwLock::new(ListenerRegistry::new())),
         }
     }
 
@@ -36,6 +39,7 @@ impl Engine {
         Self {
             instances: Arc::new(RwLock::new(HashMap::new())),
             activity_factory: factory,
+            listener_registry: Arc::new(RwLock::new(ListenerRegistry::new())),
         }
     }
 
@@ -253,6 +257,12 @@ impl Engine {
     pub async fn get_instance(&self, instance_id: &str) -> Option<Arc<ProcessInstance>> {
         let instances = self.instances.read().await;
         instances.get(instance_id).cloned()
+    }
+
+    /// Add a listener to the engine
+    pub async fn add_listener(&self, listener: Arc<dyn ProcessListener>) {
+        let registry = self.listener_registry.write().await;
+        registry.register(listener).await;
     }
 }
 

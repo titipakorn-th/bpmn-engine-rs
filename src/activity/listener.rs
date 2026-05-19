@@ -55,7 +55,7 @@ pub enum ListenerError {
 /// Listener Registry
 ///
 /// Registry for managing process listeners.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ListenerRegistry {
     listeners: Arc<tokio::sync::RwLock<Vec<Arc<dyn ProcessListener>>>>,
 }
