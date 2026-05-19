@@ -6,7 +6,7 @@ use crate::activity::{Activity, ActivityError, ActivityResult};
 use crate::capability::Capability;
 use crate::engine::context::ProcessInstanceState;
 use crate::engine::ExecutionContext;
-use crate::model::{StartEvent, EndEvent, IntermediateCatchEvent, IntermediateThrowEvent};
+use crate::model::{StartEvent, EndEvent, IntermediateCatchEvent, IntermediateThrowEvent, EventDefinition};
 use async_trait::async_trait;
 
 /// Start Event Activity
@@ -90,15 +90,43 @@ impl IntermediateCatchEventActivity {
 
 #[async_trait]
 impl Activity for IntermediateCatchEventActivity {
-    async fn execute(&self, _context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
-        // Intermediate catch events wait for the event to occur
-        // TODO: Implement event waiting based on event definition
-        Ok(ActivityResult::Waiting {
-            reason: format!(
-                "Intermediate catch event '{}' waiting for event",
-                self.event.base.id
-            ),
-        })
+    async fn execute(&self, context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
+        match &self.event.event_definition {
+            Some(EventDefinition::Timer { time_definition, .. }) => {
+                if let Some(timer_str) = time_definition {
+                    // Use timer module to calculate due date
+                    let due_date = crate::engine::timer::calculate_due_date(timer_str)
+                        .map_err(|e| ActivityError::ExecutionFailed(e))?;
+
+                    // Store timer info in context for platform to handle
+                    let timer_key = format!("_timer_due_{}", self.event.base.id);
+                    context.set_variable(timer_key, serde_json::json!(due_date.to_rfc3339()));
+
+                    Ok(ActivityResult::Waiting {
+                        reason: format!(
+                            "Timer '{}' waiting until {}",
+                            self.event.base.id,
+                            due_date.format("%Y-%m-%d %H:%M UTC")
+                        ),
+                    })
+                } else {
+                    Ok(ActivityResult::Waiting {
+                        reason: format!(
+                            "Intermediate catch event '{}' waiting for event",
+                            self.event.base.id
+                        ),
+                    })
+                }
+            }
+            _ => {
+                Ok(ActivityResult::Waiting {
+                    reason: format!(
+                        "Intermediate catch event '{}' waiting for event",
+                        self.event.base.id
+                    ),
+                })
+            }
+        }
     }
 
     fn id(&self) -> &str {
