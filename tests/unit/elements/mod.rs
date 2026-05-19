@@ -3,4 +3,5 @@
 mod task_test;
 mod gateway_test;
 mod event_test;
+mod timer_test;
 

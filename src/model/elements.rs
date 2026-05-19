@@ -596,11 +596,40 @@ impl SequenceFlow {
     }
 }
 
+/// Timer Definition
+///
+/// Represents the type of timer specification in BPMN.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TimerDefinition {
+    /// Fixed date/time (ISO 8601 date format)
+    TimeDate(String),
+    /// Duration from now (ISO 8601 duration format, e.g., PT3D for 3 days)
+    TimeDuration(String),
+    /// Repeating cycle (ISO 8601 duration format, e.g., R3/PT1H for every hour, 3 times)
+    TimeCycle(String),
+}
+
+impl TimerDefinition {
+    /// Create a TimerDefinition from parsed TimerData
+    pub fn from_timer_data(data: &crate::model::xml::TimerData) -> Self {
+        if let Some(ref date) = data.time_date {
+            TimerDefinition::TimeDate(date.clone())
+        } else if let Some(ref duration) = data.time_duration {
+            TimerDefinition::TimeDuration(duration.clone())
+        } else if let Some(ref cycle) = data.time_cycle {
+            TimerDefinition::TimeCycle(cycle.clone())
+        } else {
+            // Default to duration if no specific type is set
+            TimerDefinition::TimeDuration(String::new())
+        }
+    }
+}
+
 /// Event Definition
 #[derive(Debug, Clone)]
 pub enum EventDefinition {
     Message { message_ref: Option<String> },
-    Timer { time_definition: Option<String> },
+    Timer { time_definition: Option<String>, timer_def: Option<TimerDefinition> },
     Signal { signal_ref: Option<String> },
     Error { error_ref: Option<String> },
     Escalation { escalation_ref: Option<String> },
@@ -616,7 +645,10 @@ impl EventDefinition {
     pub fn from_json(json: BpmnJsonEventDefinition) -> Self {
         match json {
             BpmnJsonEventDefinition::Message { message_ref } => EventDefinition::Message { message_ref },
-            BpmnJsonEventDefinition::Timer { time_definition } => EventDefinition::Timer { time_definition },
+            BpmnJsonEventDefinition::Timer { time_definition } => EventDefinition::Timer {
+                time_definition,
+                timer_def: None,
+            },
             BpmnJsonEventDefinition::Signal { signal_ref } => EventDefinition::Signal { signal_ref },
             BpmnJsonEventDefinition::Error { error_ref } => EventDefinition::Error { error_ref },
             BpmnJsonEventDefinition::Escalation { escalation_ref } => {
@@ -640,7 +672,7 @@ impl EventDefinition {
     pub fn to_json(&self) -> BpmnJsonEventDefinition {
         match self {
             EventDefinition::Message { message_ref } => BpmnJsonEventDefinition::Message { message_ref: message_ref.clone() },
-            EventDefinition::Timer { time_definition } => BpmnJsonEventDefinition::Timer { time_definition: time_definition.clone() },
+            EventDefinition::Timer { time_definition, .. } => BpmnJsonEventDefinition::Timer { time_definition: time_definition.clone() },
             EventDefinition::Signal { signal_ref } => BpmnJsonEventDefinition::Signal { signal_ref: signal_ref.clone() },
             EventDefinition::Error { error_ref } => BpmnJsonEventDefinition::Error { error_ref: error_ref.clone() },
             EventDefinition::Escalation { escalation_ref } => BpmnJsonEventDefinition::Escalation { escalation_ref: escalation_ref.clone() },

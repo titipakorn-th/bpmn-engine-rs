@@ -20,6 +20,14 @@ pub mod namespaces {
     pub const DI: &str = "http://www.omg.org/spec/DD/20100524/DI";
 }
 
+/// Timer definition data collected during parsing
+#[derive(Debug, Clone, Default)]
+pub struct TimerData {
+    pub time_date: Option<String>,
+    pub time_duration: Option<String>,
+    pub time_cycle: Option<String>,
+}
+
 /// Helper function to extract attributes from XML element
 fn extract_attributes(e: &BytesStart) -> HashMap<String, String> {
     let mut attrs = HashMap::new();
@@ -58,12 +66,20 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
     let mut flows: HashMap<String, SequenceFlow> = HashMap::new();
     let variables: HashMap<String, Variable> = HashMap::new();
 
+    // State for nested element parsing
+    let mut current_event_id: Option<String> = None;
+    let mut current_event_name: Option<String> = None;
+    let mut timer_data: TimerData = TimerData::default();
+
+    // Stack to track nested elements
+    let mut element_stack: Vec<String> = Vec::new();
+
     loop {
         match reader.read_event_into(&mut buf) {
-            Ok(Event::Start(e)) | Ok(Event::Empty(e)) => {
+            Ok(Event::Start(e)) => {
                 let name = e.name();
                 let attrs = extract_attributes(&e);
-                
+
                 // Process element
                 if matches_element_name(name.as_ref(), &[b"bpmn2:process", b"bpmn:process", b"process"]) {
                     if let Some(id) = attrs.get("id") {
@@ -78,35 +94,41 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 }
                 // Start Event
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:startEvent", b"bpmn:startEvent", b"startEvent"]) {
-                    if let Some(id) = attrs.get("id") {
-                        elements.insert(
-                            id.clone(),
-                            ProcessElement::StartEvent(StartEvent {
-                                base: ElementBase {
-                                    id: id.clone(),
-                                    name: attrs.get("name").cloned(),
-                                    documentation: None,
-                                },
-                                event_definition: None,
-                            }),
-                        );
-                    }
+                    current_event_id = attrs.get("id").cloned();
+                    current_event_name = attrs.get("name").cloned();
+                    timer_data = TimerData::default();
+                    element_stack.push("startEvent".to_string());
                 }
                 // End Event
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:endEvent", b"bpmn:endEvent", b"endEvent"]) {
-                    if let Some(id) = attrs.get("id") {
-                        elements.insert(
-                            id.clone(),
-                            ProcessElement::EndEvent(EndEvent {
-                                base: ElementBase {
-                                    id: id.clone(),
-                                    name: attrs.get("name").cloned(),
-                                    documentation: None,
-                                },
-                                event_definition: None,
-                            }),
-                        );
-                    }
+                    current_event_id = attrs.get("id").cloned();
+                    current_event_name = attrs.get("name").cloned();
+                    timer_data = TimerData::default();
+                    element_stack.push("endEvent".to_string());
+                }
+                // Intermediate Catch Event
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateCatchEvent", b"bpmn:intermediateCatchEvent", b"intermediateCatchEvent"]) {
+                    current_event_id = attrs.get("id").cloned();
+                    current_event_name = attrs.get("name").cloned();
+                    timer_data = TimerData::default();
+                    element_stack.push("intermediateCatchEvent".to_string());
+                }
+                // Timer Event Definition
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:timerEventDefinition", b"bpmn:timerEventDefinition", b"timerEventDefinition"]) {
+                    timer_data = TimerData::default();
+                    element_stack.push("timerEventDefinition".to_string());
+                }
+                // Time Date
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:timeDate", b"bpmn:timeDate", b"timeDate"]) {
+                    element_stack.push("timeDate".to_string());
+                }
+                // Time Duration
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:timeDuration", b"bpmn:timeDuration", b"timeDuration"]) {
+                    element_stack.push("timeDuration".to_string());
+                }
+                // Time Cycle
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:timeCycle", b"bpmn:timeCycle", b"timeCycle"]) {
+                    element_stack.push("timeCycle".to_string());
                 }
                 // Service Task
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
@@ -242,6 +264,284 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                             },
                         );
                     }
+                }
+            }
+            Ok(Event::Empty(e)) => {
+                // Handle self-closing elements (empty elements like <element />)
+                let name = e.name();
+                let attrs = extract_attributes(&e);
+
+                // Service Task
+                if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::ServiceTask(ServiceTask {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                implementation: attrs.get("implementation").cloned(),
+                                operation_ref: attrs.get("operationRef").cloned(),
+                                io_mapping: Default::default(),
+                            }),
+                        );
+                    }
+                }
+                // User Task
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:userTask", b"bpmn:userTask", b"userTask"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::UserTask(UserTask {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                assignment: None,
+                                form_key: attrs.get("formKey").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Script Task
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:scriptTask", b"bpmn:scriptTask", b"scriptTask"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::ScriptTask(ScriptTask {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                script_format: attrs.get("scriptFormat").cloned(),
+                                script: None,
+                            }),
+                        );
+                    }
+                }
+                // Manual Task
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:manualTask", b"bpmn:manualTask", b"manualTask"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::ManualTask(ManualTask {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                            }),
+                        );
+                    }
+                }
+                // Exclusive Gateway
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:exclusiveGateway", b"bpmn:exclusiveGateway", b"exclusiveGateway"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::ExclusiveGateway(ExclusiveGateway {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                default_flow: attrs.get("default").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Parallel Gateway
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:parallelGateway", b"bpmn:parallelGateway", b"parallelGateway"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::ParallelGateway(ParallelGateway {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                default_flow: attrs.get("default").cloned(),
+                                gateway_direction: crate::engine::context::GatewayDirection::Unknown,
+                            }),
+                        );
+                    }
+                }
+                // Inclusive Gateway
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:inclusiveGateway", b"bpmn:inclusiveGateway", b"inclusiveGateway"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::InclusiveGateway(InclusiveGateway {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                default_flow: attrs.get("default").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Sequence Flow
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:sequenceFlow", b"bpmn:sequenceFlow", b"sequenceFlow"]) {
+                    if let (Some(id), Some(source), Some(target)) = (
+                        attrs.get("id"),
+                        attrs.get("sourceRef"),
+                        attrs.get("targetRef"),
+                    ) {
+                        flows.insert(
+                            id.clone(),
+                            SequenceFlow {
+                                id: id.clone(),
+                                name: attrs.get("name").cloned(),
+                                source_ref: source.clone(),
+                                target_ref: target.clone(),
+                                condition_expression: None,
+                            },
+                        );
+                    }
+                }
+                // Start Event (empty - no children)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:startEvent", b"bpmn:startEvent", b"startEvent"]) {
+                    if let Some(event_id) = attrs.get("id").cloned() {
+                        elements.insert(
+                            event_id.clone(),
+                            ProcessElement::StartEvent(StartEvent {
+                                base: ElementBase {
+                                    id: event_id,
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                event_definition: None,
+                            }),
+                        );
+                    }
+                }
+                // End Event (empty - no children)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:endEvent", b"bpmn:endEvent", b"endEvent"]) {
+                    if let Some(event_id) = attrs.get("id").cloned() {
+                        elements.insert(
+                            event_id.clone(),
+                            ProcessElement::EndEvent(EndEvent {
+                                base: ElementBase {
+                                    id: event_id,
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                event_definition: None,
+                            }),
+                        );
+                    }
+                }
+            }
+            Ok(Event::Text(e)) => {
+                let text = String::from_utf8_lossy(&e).trim().to_string();
+                if !text.is_empty() {
+                    // Check if we're inside a timer child element
+                    if element_stack.last().map(|s| s.as_str()) == Some("timeDate") {
+                        timer_data.time_date = Some(text);
+                    } else if element_stack.last().map(|s| s.as_str()) == Some("timeDuration") {
+                        timer_data.time_duration = Some(text);
+                    } else if element_stack.last().map(|s| s.as_str()) == Some("timeCycle") {
+                        timer_data.time_cycle = Some(text);
+                    }
+                }
+            }
+            Ok(Event::End(e)) => {
+                let name = e.name();
+
+                // Handle closing of timer child elements
+                if matches_element_name(name.as_ref(), &[b"bpmn2:timeDate", b"bpmn:timeDate", b"timeDate"]) ||
+                   matches_element_name(name.as_ref(), &[b"bpmn2:timeDuration", b"bpmn:timeDuration", b"timeDuration"]) ||
+                   matches_element_name(name.as_ref(), &[b"bpmn2:timeCycle", b"bpmn:timeCycle", b"timeCycle"]) {
+                    element_stack.pop();
+                }
+                // Handle closing of timerEventDefinition
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:timerEventDefinition", b"bpmn:timerEventDefinition", b"timerEventDefinition"]) {
+                    element_stack.pop();
+                }
+                // Handle closing of Start Event
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:startEvent", b"bpmn:startEvent", b"startEvent"]) {
+                    if let Some(event_id) = current_event_id.take() {
+                        let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
+                            Some(EventDefinition::Timer {
+                                time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
+                                timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
+                            })
+                        } else {
+                            None
+                        };
+
+                        elements.insert(
+                            event_id.clone(),
+                            ProcessElement::StartEvent(StartEvent {
+                                base: ElementBase {
+                                    id: event_id,
+                                    name: current_event_name.take(),
+                                    documentation: None,
+                                },
+                                event_definition: event_def,
+                            }),
+                        );
+                    }
+                    element_stack.clear();
+                }
+                // Handle closing of End Event
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:endEvent", b"bpmn:endEvent", b"endEvent"]) {
+                    if let Some(event_id) = current_event_id.take() {
+                        let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
+                            Some(EventDefinition::Timer {
+                                time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
+                                timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
+                            })
+                        } else {
+                            None
+                        };
+
+                        elements.insert(
+                            event_id.clone(),
+                            ProcessElement::EndEvent(EndEvent {
+                                base: ElementBase {
+                                    id: event_id,
+                                    name: current_event_name.take(),
+                                    documentation: None,
+                                },
+                                event_definition: event_def,
+                            }),
+                        );
+                    }
+                    element_stack.clear();
+                }
+                // Handle closing of Intermediate Catch Event
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateCatchEvent", b"bpmn:intermediateCatchEvent", b"intermediateCatchEvent"]) {
+                    if let Some(event_id) = current_event_id.take() {
+                        let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
+                            Some(EventDefinition::Timer {
+                                time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
+                                timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
+                            })
+                        } else {
+                            None
+                        };
+
+                        elements.insert(
+                            event_id.clone(),
+                            ProcessElement::IntermediateCatchEvent(IntermediateCatchEvent {
+                                base: ElementBase {
+                                    id: event_id,
+                                    name: current_event_name.take(),
+                                    documentation: None,
+                                },
+                                event_definition: event_def,
+                            }),
+                        );
+                    }
+                    element_stack.clear();
                 }
             }
             Ok(Event::Eof) => break,
