@@ -11,7 +11,7 @@ use crate::elements::gateway::{
     ExclusiveGatewayActivity, InclusiveGatewayActivity, ParallelGatewayActivity,
 };
 use crate::elements::task::{
-    ManualTaskActivity, ScriptTaskActivity, ServiceTaskActivity, UserTaskActivity,
+    CallActivityTask, ManualTaskActivity, ScriptTaskActivity, ServiceTaskActivity, UserTaskActivity,
 };
 use crate::model::ProcessElement;
 use std::sync::Arc;
@@ -69,6 +69,23 @@ impl ActivityFactory for DefaultActivityFactory {
             }
             ProcessElement::InclusiveGateway(e) => {
                 Ok(Arc::new(InclusiveGatewayActivity::new(e.clone())) as Arc<dyn Activity>)
+            }
+            ProcessElement::DataObject(_e) => {
+                // DataObjects are typically referenced, not executed directly
+                // Return an error as they shouldn't be instantiated as activities
+                Err(ActivityError::InvalidElement("DataObject is not executable".to_string()))
+            }
+            ProcessElement::DataInput(_e) => {
+                Err(ActivityError::InvalidElement("DataInput is not executable".to_string()))
+            }
+            ProcessElement::DataOutput(_e) => {
+                Err(ActivityError::InvalidElement("DataOutput is not executable".to_string()))
+            }
+            ProcessElement::DataObjectReference(_e) => {
+                Err(ActivityError::InvalidElement("DataObjectReference is not executable".to_string()))
+            }
+            ProcessElement::CallActivity(e) => {
+                Ok(Arc::new(CallActivityTask::new(e.clone())) as Arc<dyn Activity>)
             }
         }
     }

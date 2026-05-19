@@ -4,4 +4,6 @@ mod task_test;
 mod gateway_test;
 mod event_test;
 mod timer_test;
+mod data_object_test;
+mod signal_test;
 

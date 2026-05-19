@@ -51,6 +51,7 @@ fn test_factory_create_service_task_activity() {
         implementation: Some("webService".to_string()),
         operation_ref: None,
         io_mapping: Default::default(),
+        loop_characteristics: None,
     });
 
     let activity = factory.create_activity(&element).unwrap();
@@ -68,6 +69,7 @@ fn test_factory_create_user_task_activity() {
         },
         assignment: None,
         form_key: None,
+        loop_characteristics: None,
     });
 
     let activity = factory.create_activity(&element).unwrap();
@@ -85,6 +87,7 @@ fn test_factory_create_script_task_activity() {
         },
         script_format: Some("javascript".to_string()),
         script: Some("console.log('test');".to_string()),
+        loop_characteristics: None,
     });
 
     let activity = factory.create_activity(&element).unwrap();

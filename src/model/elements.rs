@@ -166,6 +166,16 @@ pub enum ProcessElement {
     ParallelGateway(ParallelGateway),
     /// Inclusive Gateway
     InclusiveGateway(InclusiveGateway),
+    /// Data Object
+    DataObject(DataObject),
+    /// Data Input
+    DataInput(DataInput),
+    /// Data Output
+    DataOutput(DataOutput),
+    /// Data Object Reference
+    DataObjectReference(DataObjectReference),
+    /// Call Activity
+    CallActivity(CallActivity),
 }
 
 impl ProcessElement {
@@ -194,6 +204,21 @@ impl ProcessElement {
             BpmnJsonElement::InclusiveGateway(e) => {
                 Ok(ProcessElement::InclusiveGateway(InclusiveGateway::from_json(e)))
             }
+            BpmnJsonElement::DataObject(e) => {
+                Ok(ProcessElement::DataObject(DataObject::from_json(e)))
+            }
+            BpmnJsonElement::DataInput(e) => {
+                Ok(ProcessElement::DataInput(DataInput::from_json(e)))
+            }
+            BpmnJsonElement::DataOutput(e) => {
+                Ok(ProcessElement::DataOutput(DataOutput::from_json(e)))
+            }
+            BpmnJsonElement::DataObjectReference(e) => {
+                Ok(ProcessElement::DataObjectReference(DataObjectReference::from_json(e)))
+            }
+            BpmnJsonElement::CallActivity(e) => {
+                Ok(ProcessElement::CallActivity(CallActivity::from_json(e)))
+            }
             BpmnJsonElement::SequenceFlow(_) => {
                 use serde::de::Error;
                 Err(serde_json::Error::custom("SequenceFlow should be handled separately"))
@@ -214,6 +239,11 @@ impl ProcessElement {
             ProcessElement::ExclusiveGateway(e) => &e.base.id,
             ProcessElement::ParallelGateway(e) => &e.base.id,
             ProcessElement::InclusiveGateway(e) => &e.base.id,
+            ProcessElement::DataObject(e) => &e.base.id,
+            ProcessElement::DataInput(e) => &e.base.id,
+            ProcessElement::DataOutput(e) => &e.base.id,
+            ProcessElement::DataObjectReference(e) => &e.base.id,
+            ProcessElement::CallActivity(e) => &e.base.id,
         }
     }
 
@@ -230,6 +260,11 @@ impl ProcessElement {
             ProcessElement::ExclusiveGateway(e) => BpmnJsonElement::ExclusiveGateway(e.to_json()),
             ProcessElement::ParallelGateway(e) => BpmnJsonElement::ParallelGateway(e.to_json()),
             ProcessElement::InclusiveGateway(e) => BpmnJsonElement::InclusiveGateway(e.to_json()),
+            ProcessElement::DataObject(e) => BpmnJsonElement::DataObject(e.to_json()),
+            ProcessElement::DataInput(e) => BpmnJsonElement::DataInput(e.to_json()),
+            ProcessElement::DataOutput(e) => BpmnJsonElement::DataOutput(e.to_json()),
+            ProcessElement::DataObjectReference(e) => BpmnJsonElement::DataObjectReference(e.to_json()),
+            ProcessElement::CallActivity(e) => BpmnJsonElement::CallActivity(e.to_json()),
         }
     }
 }
@@ -367,6 +402,7 @@ pub struct ServiceTask {
     pub implementation: Option<String>,
     pub operation_ref: Option<String>,
     pub io_mapping: IoMapping,
+    pub loop_characteristics: Option<MultiInstanceLoopCharacteristics>,
 }
 
 impl ServiceTask {
@@ -376,6 +412,7 @@ impl ServiceTask {
             implementation: json.implementation,
             operation_ref: json.operation_ref,
             io_mapping: IoMapping::from_json(json.io_mapping),
+            loop_characteristics: MultiInstanceLoopCharacteristics::from_json(json.loop_characteristics),
         }
     }
 
@@ -389,6 +426,7 @@ impl ServiceTask {
             implementation: self.implementation.clone(),
             operation_ref: self.operation_ref.clone(),
             io_mapping: self.io_mapping.to_json(),
+            loop_characteristics: self.loop_characteristics.as_ref().and_then(|lc| lc.to_json()),
         }
     }
 }
@@ -399,6 +437,7 @@ pub struct UserTask {
     pub base: ElementBase,
     pub assignment: Option<Assignment>,
     pub form_key: Option<String>,
+    pub loop_characteristics: Option<MultiInstanceLoopCharacteristics>,
 }
 
 impl UserTask {
@@ -407,6 +446,7 @@ impl UserTask {
             base: ElementBase::from_json(json.base),
             assignment: json.assignment.map(Assignment::from_json),
             form_key: json.form_key,
+            loop_characteristics: MultiInstanceLoopCharacteristics::from_json(json.loop_characteristics),
         }
     }
 
@@ -419,6 +459,7 @@ impl UserTask {
             },
             assignment: self.assignment.as_ref().map(Assignment::to_json),
             form_key: self.form_key.clone(),
+            loop_characteristics: self.loop_characteristics.as_ref().and_then(|lc| lc.to_json()),
         }
     }
 }
@@ -429,6 +470,7 @@ pub struct ScriptTask {
     pub base: ElementBase,
     pub script_format: Option<String>,
     pub script: Option<String>,
+    pub loop_characteristics: Option<MultiInstanceLoopCharacteristics>,
 }
 
 impl ScriptTask {
@@ -437,6 +479,7 @@ impl ScriptTask {
             base: ElementBase::from_json(json.base),
             script_format: json.script_format,
             script: json.script,
+            loop_characteristics: MultiInstanceLoopCharacteristics::from_json(json.loop_characteristics),
         }
     }
 
@@ -449,6 +492,7 @@ impl ScriptTask {
             },
             script_format: self.script_format.clone(),
             script: self.script.clone(),
+            loop_characteristics: self.loop_characteristics.as_ref().and_then(|lc| lc.to_json()),
         }
     }
 }
@@ -561,6 +605,184 @@ impl InclusiveGateway {
     }
 }
 
+/// Data Object
+#[derive(Debug, Clone)]
+pub struct DataObject {
+    pub base: ElementBase,
+    pub data_state: Option<String>,
+}
+
+impl DataObject {
+    pub fn from_json(json: BpmnJsonDataObject) -> Self {
+        Self {
+            base: ElementBase::from_json(json.base),
+            data_state: json.data_state,
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonDataObject {
+        BpmnJsonDataObject {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            data_state: self.data_state.clone(),
+        }
+    }
+}
+
+/// Data Input
+#[derive(Debug, Clone)]
+pub struct DataInput {
+    pub base: ElementBase,
+    pub input_set: Option<String>,
+}
+
+impl DataInput {
+    pub fn from_json(json: BpmnJsonDataInput) -> Self {
+        Self {
+            base: ElementBase::from_json(json.base),
+            input_set: json.input_set,
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonDataInput {
+        BpmnJsonDataInput {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            input_set: self.input_set.clone(),
+        }
+    }
+}
+
+/// Data Output
+#[derive(Debug, Clone)]
+pub struct DataOutput {
+    pub base: ElementBase,
+    pub output_set: Option<String>,
+}
+
+impl DataOutput {
+    pub fn from_json(json: BpmnJsonDataOutput) -> Self {
+        Self {
+            base: ElementBase::from_json(json.base),
+            output_set: json.output_set,
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonDataOutput {
+        BpmnJsonDataOutput {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            output_set: self.output_set.clone(),
+        }
+    }
+}
+
+/// Data Object Reference
+#[derive(Debug, Clone)]
+pub struct DataObjectReference {
+    pub base: ElementBase,
+    pub data_object_ref: Option<String>,
+}
+
+impl DataObjectReference {
+    pub fn from_json(json: BpmnJsonDataObjectReference) -> Self {
+        Self {
+            base: ElementBase::from_json(json.base),
+            data_object_ref: json.data_object_ref,
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonDataObjectReference {
+        BpmnJsonDataObjectReference {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            data_object_ref: self.data_object_ref.clone(),
+        }
+    }
+}
+
+/// Call Activity
+///
+/// Represents a call activity that references an external subprocess.
+#[derive(Debug, Clone)]
+pub struct CallActivity {
+    pub base: ElementBase,
+    /// Called process ID (reference to external process)
+    pub called_element: Option<String>,
+    /// Business key expression
+    pub business_key: Option<String>,
+    /// Input data mapping
+    pub data_input_associations: Vec<DataAssociation>,
+    /// Output data mapping
+    pub data_output_associations: Vec<DataAssociation>,
+}
+
+impl CallActivity {
+    pub fn from_json(json: BpmnJsonCallActivity) -> Self {
+        Self {
+            base: ElementBase::from_json(json.base),
+            called_element: json.called_element,
+            business_key: json.business_key,
+            data_input_associations: json.data_input_associations.into_iter().map(DataAssociation::from_json).collect(),
+            data_output_associations: json.data_output_associations.into_iter().map(DataAssociation::from_json).collect(),
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonCallActivity {
+        BpmnJsonCallActivity {
+            base: BpmnJsonElementBase {
+                id: self.base.id.clone(),
+                name: self.base.name.clone(),
+                documentation: self.base.documentation.clone(),
+            },
+            called_element: self.called_element.clone(),
+            business_key: self.business_key.clone(),
+            data_input_associations: self.data_input_associations.iter().map(DataAssociation::to_json).collect(),
+            data_output_associations: self.data_output_associations.iter().map(DataAssociation::to_json).collect(),
+        }
+    }
+}
+
+/// Data Association
+///
+/// Represents a data association for input/output mapping.
+#[derive(Debug, Clone)]
+pub struct DataAssociation {
+    pub source_ref: Option<String>,
+    pub target_ref: Option<String>,
+    pub transformation: Option<String>,
+}
+
+impl DataAssociation {
+    pub fn from_json(json: BpmnJsonDataAssociation) -> Self {
+        Self {
+            source_ref: json.source_ref,
+            target_ref: json.target_ref,
+            transformation: json.transformation,
+        }
+    }
+
+    pub fn to_json(&self) -> BpmnJsonDataAssociation {
+        BpmnJsonDataAssociation {
+            source_ref: self.source_ref.clone(),
+            target_ref: self.target_ref.clone(),
+            transformation: self.transformation.clone(),
+        }
+    }
+}
+
 /// Sequence Flow
 #[derive(Debug, Clone)]
 pub struct SequenceFlow {
@@ -594,6 +816,15 @@ impl SequenceFlow {
             condition_expression: self.condition_expression.as_ref().map(ConditionExpression::to_json),
         }
     }
+}
+
+/// Signal Definition
+///
+/// Represents a signal event specification in BPMN.
+#[derive(Debug, Clone)]
+pub struct SignalDefinition {
+    pub name: Option<String>,
+    pub structure_ref: Option<String>,
 }
 
 /// Timer Definition
@@ -783,6 +1014,44 @@ impl Assignment {
             assignment_type: self.assignment_type.clone(),
             value: self.value.clone(),
         }
+    }
+}
+
+/// Multi-Instance Loop Characteristics
+///
+/// Represents multi-instance loop behavior for activities.
+/// Can be sequential (one at a time) or parallel (multiple at once).
+#[derive(Debug, Clone)]
+pub struct MultiInstanceLoopCharacteristics {
+    /// Sequential (false) or parallel (true) execution
+    pub is_parallel: bool,
+    /// Number of instances to create
+    pub loop_cardinality: Option<i32>,
+    /// Completion condition expression
+    pub completion_condition: Option<String>,
+    /// Behavior when one instance completes
+    pub behavior: Option<String>,
+}
+
+impl MultiInstanceLoopCharacteristics {
+    /// Create from JSON representation
+    pub fn from_json(json: Option<BpmnJsonMultiInstanceLoopCharacteristics>) -> Option<Self> {
+        json.map(|j| Self {
+            is_parallel: j.is_parallel.unwrap_or(false),
+            loop_cardinality: j.loop_cardinality,
+            completion_condition: j.completion_condition,
+            behavior: j.behavior,
+        })
+    }
+
+    /// Convert to JSON representation
+    pub fn to_json(&self) -> Option<BpmnJsonMultiInstanceLoopCharacteristics> {
+        Some(BpmnJsonMultiInstanceLoopCharacteristics {
+            is_parallel: Some(self.is_parallel),
+            loop_cardinality: self.loop_cardinality,
+            completion_condition: self.completion_condition.clone(),
+            behavior: self.behavior.clone(),
+        })
     }
 }
 

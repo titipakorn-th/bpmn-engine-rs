@@ -68,6 +68,8 @@ pub enum ActivityError {
     NotFound(String),
     #[error("Condition evaluation failed: {0}")]
     ConditionEvaluationFailed(String),
+    #[error("Invalid element: {0}")]
+    InvalidElement(String),
 }
 
 /// Activity Factory

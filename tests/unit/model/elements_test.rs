@@ -56,6 +56,7 @@ fn test_process_element_from_json_service_task() {
         implementation: Some("webService".to_string()),
         operation_ref: None,
         io_mapping: BpmnJsonIoMapping::default(),
+        loop_characteristics: None,
     });
 
     let elem = ProcessElement::from_json_element(json_elem).unwrap();

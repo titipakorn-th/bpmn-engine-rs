@@ -28,6 +28,41 @@ pub struct TimerData {
     pub time_cycle: Option<String>,
 }
 
+/// Signal data collected during parsing
+#[derive(Debug, Clone, Default)]
+pub struct SignalData {
+    pub signal_ref: Option<String>,
+}
+
+/// Data association collected during parsing
+#[derive(Debug, Clone, Default)]
+pub struct DataAssociationData {
+    pub source_ref: Option<String>,
+    pub target_ref: Option<String>,
+    pub transformation: Option<String>,
+}
+
+/// Call Activity data collected during parsing
+#[derive(Debug, Clone, Default)]
+pub struct CallActivityData {
+    pub called_element: Option<String>,
+    pub business_key: Option<String>,
+    pub data_input_associations: Vec<DataAssociationData>,
+    pub data_output_associations: Vec<DataAssociationData>,
+    pub current_data_association: Option<DataAssociationData>,
+    pub parsing_data_input: bool,
+    pub parsing_data_output: bool,
+}
+
+/// Multi-Instance Loop Characteristics data collected during parsing
+#[derive(Debug, Clone, Default)]
+pub struct MultiInstanceData {
+    pub is_parallel: Option<bool>,
+    pub loop_cardinality: Option<i32>,
+    pub completion_condition: Option<String>,
+    pub behavior: Option<String>,
+}
+
 /// Helper function to extract attributes from XML element
 fn extract_attributes(e: &BytesStart) -> HashMap<String, String> {
     let mut attrs = HashMap::new();
@@ -70,6 +105,13 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
     let mut current_event_id: Option<String> = None;
     let mut current_event_name: Option<String> = None;
     let mut timer_data: TimerData = TimerData::default();
+    let mut signal_data: SignalData = SignalData::default();
+    let mut call_activity_data: CallActivityData = CallActivityData::default();
+    let mut current_call_activity_id: Option<String> = None;
+    let mut current_call_activity_name: Option<String> = None;
+    let mut multi_instance_data: MultiInstanceData = MultiInstanceData::default();
+    let mut current_task_id: Option<String> = None;
+    let mut current_task_type: Option<String> = None;
 
     // Stack to track nested elements
     let mut element_stack: Vec<String> = Vec::new();
@@ -130,8 +172,19 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:timeCycle", b"bpmn:timeCycle", b"timeCycle"]) {
                     element_stack.push("timeCycle".to_string());
                 }
+                // Signal Event Definition
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:signalEventDefinition", b"bpmn:signalEventDefinition", b"signalEventDefinition"]) {
+                    signal_data = SignalData::default();
+                    if let Some(signal_ref) = attrs.get("signalRef") {
+                        signal_data.signal_ref = Some(signal_ref.clone());
+                    }
+                    element_stack.push("signalEventDefinition".to_string());
+                }
                 // Service Task
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
+                    current_task_id = attrs.get("id").cloned();
+                    current_task_type = Some("serviceTask".to_string());
+                    multi_instance_data = MultiInstanceData::default();
                     if let Some(id) = attrs.get("id") {
                         elements.insert(
                             id.clone(),
@@ -144,12 +197,17 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 implementation: attrs.get("implementation").cloned(),
                                 operation_ref: attrs.get("operationRef").cloned(),
                                 io_mapping: Default::default(),
+                                loop_characteristics: None,
                             }),
                         );
                     }
+                    element_stack.push("serviceTask".to_string());
                 }
                 // User Task
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:userTask", b"bpmn:userTask", b"userTask"]) {
+                    current_task_id = attrs.get("id").cloned();
+                    current_task_type = Some("userTask".to_string());
+                    multi_instance_data = MultiInstanceData::default();
                     if let Some(id) = attrs.get("id") {
                         elements.insert(
                             id.clone(),
@@ -161,12 +219,17 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 },
                                 assignment: None,
                                 form_key: attrs.get("formKey").cloned(),
+                                loop_characteristics: None,
                             }),
                         );
                     }
+                    element_stack.push("userTask".to_string());
                 }
                 // Script Task
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:scriptTask", b"bpmn:scriptTask", b"scriptTask"]) {
+                    current_task_id = attrs.get("id").cloned();
+                    current_task_type = Some("scriptTask".to_string());
+                    multi_instance_data = MultiInstanceData::default();
                     if let Some(id) = attrs.get("id") {
                         elements.insert(
                             id.clone(),
@@ -178,9 +241,11 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 },
                                 script_format: attrs.get("scriptFormat").cloned(),
                                 script: None,
+                                loop_characteristics: None,
                             }),
                         );
                     }
+                    element_stack.push("scriptTask".to_string());
                 }
                 // Manual Task
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:manualTask", b"bpmn:manualTask", b"manualTask"]) {
@@ -246,6 +311,105 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                         );
                     }
                 }
+                // Data Object
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataObject", b"bpmn:dataObject", b"dataObject"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::DataObject(DataObject {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                data_state: attrs.get("dataState").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Data Object Reference
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataObjectReference", b"bpmn:dataObjectReference", b"dataObjectReference"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::DataObjectReference(DataObjectReference {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                data_object_ref: attrs.get("dataObjectRef").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Data Input
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataInput", b"bpmn:dataInput", b"dataInput"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::DataInput(DataInput {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                input_set: attrs.get("inputSet").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Data Output
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataOutput", b"bpmn:dataOutput", b"dataOutput"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::DataOutput(DataOutput {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                output_set: attrs.get("outputSet").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Call Activity
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:callActivity", b"bpmn:callActivity", b"callActivity"]) {
+                    current_call_activity_id = attrs.get("id").cloned();
+                    current_call_activity_name = attrs.get("name").cloned();
+                    call_activity_data = CallActivityData {
+                        called_element: attrs.get("calledElement").cloned(),
+                        business_key: attrs.get("businessKey").cloned(),
+                        ..Default::default()
+                    };
+                    element_stack.push("callActivity".to_string());
+                }
+                // Data Input Association
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataInputAssociation", b"bpmn:dataInputAssociation", b"dataInputAssociation"]) {
+                    if !element_stack.contains(&"callActivity".to_string()) {
+                        element_stack.push("dataInputAssociation".to_string());
+                    }
+                    call_activity_data.parsing_data_input = true;
+                    call_activity_data.current_data_association = Some(DataAssociationData::default());
+                }
+                // Data Output Association
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataOutputAssociation", b"bpmn:dataOutputAssociation", b"dataOutputAssociation"]) {
+                    if !element_stack.contains(&"callActivity".to_string()) {
+                        element_stack.push("dataOutputAssociation".to_string());
+                    }
+                    call_activity_data.parsing_data_output = true;
+                    call_activity_data.current_data_association = Some(DataAssociationData::default());
+                }
+                // Source Ref (for data association)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:sourceRef", b"bpmn:sourceRef", b"sourceRef"]) {
+                    element_stack.push("sourceRef".to_string());
+                }
+                // Target Ref (for data association)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:targetRef", b"bpmn:targetRef", b"targetRef"]) {
+                    element_stack.push("targetRef".to_string());
+                }
                 // Sequence Flow
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:sequenceFlow", b"bpmn:sequenceFlow", b"sequenceFlow"]) {
                     if let (Some(id), Some(source), Some(target)) = (
@@ -264,6 +428,24 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                             },
                         );
                     }
+                }
+                // Multi-Instance Loop Characteristics
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:multiInstanceLoopCharacteristics", b"bpmn:multiInstanceLoopCharacteristics", b"multiInstanceLoopCharacteristics"]) {
+                    multi_instance_data = MultiInstanceData {
+                        is_parallel: attrs.get("isParallel").map(|v| v == "true"),
+                        loop_cardinality: attrs.get("loopCardinality").and_then(|v| v.parse().ok()),
+                        completion_condition: attrs.get("completionCondition").cloned(),
+                        behavior: attrs.get("behavior").cloned(),
+                    };
+                    element_stack.push("multiInstanceLoopCharacteristics".to_string());
+                }
+                // Loop Cardinality
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:loopCardinality", b"bpmn:loopCardinality", b"loopCardinality"]) {
+                    element_stack.push("loopCardinality".to_string());
+                }
+                // Completion Condition
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:completionCondition", b"bpmn:completionCondition", b"completionCondition"]) {
+                    element_stack.push("completionCondition".to_string());
                 }
             }
             Ok(Event::Empty(e)) => {
@@ -285,12 +467,16 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 implementation: attrs.get("implementation").cloned(),
                                 operation_ref: attrs.get("operationRef").cloned(),
                                 io_mapping: Default::default(),
+                                loop_characteristics: None,
                             }),
                         );
                     }
                 }
                 // User Task
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:userTask", b"bpmn:userTask", b"userTask"]) {
+                    current_task_id = attrs.get("id").cloned();
+                    current_task_type = Some("userTask".to_string());
+                    multi_instance_data = MultiInstanceData::default();
                     if let Some(id) = attrs.get("id") {
                         elements.insert(
                             id.clone(),
@@ -302,12 +488,17 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 },
                                 assignment: None,
                                 form_key: attrs.get("formKey").cloned(),
+                                loop_characteristics: None,
                             }),
                         );
                     }
+                    element_stack.push("userTask".to_string());
                 }
                 // Script Task
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:scriptTask", b"bpmn:scriptTask", b"scriptTask"]) {
+                    current_task_id = attrs.get("id").cloned();
+                    current_task_type = Some("scriptTask".to_string());
+                    multi_instance_data = MultiInstanceData::default();
                     if let Some(id) = attrs.get("id") {
                         elements.insert(
                             id.clone(),
@@ -319,9 +510,11 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 },
                                 script_format: attrs.get("scriptFormat").cloned(),
                                 script: None,
+                                loop_characteristics: None,
                             }),
                         );
                     }
+                    element_stack.push("scriptTask".to_string());
                 }
                 // Manual Task
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:manualTask", b"bpmn:manualTask", b"manualTask"]) {
@@ -371,7 +564,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                         );
                     }
                 }
-                // Inclusive Gateway
+                // Inclusive Gateway (empty - no children)
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:inclusiveGateway", b"bpmn:inclusiveGateway", b"inclusiveGateway"]) {
                     if let Some(id) = attrs.get("id") {
                         elements.insert(
@@ -387,22 +580,86 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                         );
                     }
                 }
-                // Sequence Flow
-                else if matches_element_name(name.as_ref(), &[b"bpmn2:sequenceFlow", b"bpmn:sequenceFlow", b"sequenceFlow"]) {
-                    if let (Some(id), Some(source), Some(target)) = (
-                        attrs.get("id"),
-                        attrs.get("sourceRef"),
-                        attrs.get("targetRef"),
-                    ) {
-                        flows.insert(
+                // Data Object (empty - no children)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataObject", b"bpmn:dataObject", b"dataObject"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
                             id.clone(),
-                            SequenceFlow {
-                                id: id.clone(),
-                                name: attrs.get("name").cloned(),
-                                source_ref: source.clone(),
-                                target_ref: target.clone(),
-                                condition_expression: None,
-                            },
+                            ProcessElement::DataObject(DataObject {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                data_state: attrs.get("dataState").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Data Object Reference (empty - no children)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataObjectReference", b"bpmn:dataObjectReference", b"dataObjectReference"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::DataObjectReference(DataObjectReference {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                data_object_ref: attrs.get("dataObjectRef").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Data Input (empty - no children)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataInput", b"bpmn:dataInput", b"dataInput"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::DataInput(DataInput {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                input_set: attrs.get("inputSet").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Data Output (empty - no children)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataOutput", b"bpmn:dataOutput", b"dataOutput"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::DataOutput(DataOutput {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                output_set: attrs.get("outputSet").cloned(),
+                            }),
+                        );
+                    }
+                }
+                // Call Activity (empty - no children)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:callActivity", b"bpmn:callActivity", b"callActivity"]) {
+                    if let Some(id) = attrs.get("id") {
+                        elements.insert(
+                            id.clone(),
+                            ProcessElement::CallActivity(CallActivity {
+                                base: ElementBase {
+                                    id: id.clone(),
+                                    name: attrs.get("name").cloned(),
+                                    documentation: None,
+                                },
+                                called_element: attrs.get("calledElement").cloned(),
+                                business_key: attrs.get("businessKey").cloned(),
+                                data_input_associations: Vec::new(),
+                                data_output_associations: Vec::new(),
+                            }),
                         );
                     }
                 }
@@ -450,6 +707,28 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                     } else if element_stack.last().map(|s| s.as_str()) == Some("timeCycle") {
                         timer_data.time_cycle = Some(text);
                     }
+                    // Handle sourceRef in data association
+                    else if element_stack.last().map(|s| s.as_str()) == Some("sourceRef") {
+                        if let Some(ref mut current) = call_activity_data.current_data_association {
+                            current.source_ref = Some(text);
+                        }
+                    }
+                    // Handle targetRef in data association
+                    else if element_stack.last().map(|s| s.as_str()) == Some("targetRef") {
+                        if let Some(ref mut current) = call_activity_data.current_data_association {
+                            current.target_ref = Some(text);
+                        }
+                    }
+                    // Handle loopCardinality text
+                    else if element_stack.last().map(|s| s.as_str()) == Some("loopCardinality") {
+                        if let Ok(cardinality) = text.parse::<i32>() {
+                            multi_instance_data.loop_cardinality = Some(cardinality);
+                        }
+                    }
+                    // Handle completionCondition text
+                    else if element_stack.last().map(|s| s.as_str()) == Some("completionCondition") {
+                        multi_instance_data.completion_condition = Some(text);
+                    }
                 }
             }
             Ok(Event::End(e)) => {
@@ -465,14 +744,23 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:timerEventDefinition", b"bpmn:timerEventDefinition", b"timerEventDefinition"]) {
                     element_stack.pop();
                 }
+                // Handle closing of signalEventDefinition
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:signalEventDefinition", b"bpmn:signalEventDefinition", b"signalEventDefinition"]) {
+                    element_stack.pop();
+                }
                 // Handle closing of Start Event
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:startEvent", b"bpmn:startEvent", b"startEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
                         let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
+                            timer_data = TimerData::default();
                             Some(EventDefinition::Timer {
                                 time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
                                 timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
                             })
+                        } else if signal_data.signal_ref.is_some() {
+                            let signal_ref = signal_data.signal_ref.clone();
+                            signal_data = SignalData::default();
+                            Some(EventDefinition::Signal { signal_ref })
                         } else {
                             None
                         };
@@ -495,10 +783,15 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:endEvent", b"bpmn:endEvent", b"endEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
                         let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
+                            timer_data = TimerData::default();
                             Some(EventDefinition::Timer {
                                 time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
                                 timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
                             })
+                        } else if signal_data.signal_ref.is_some() {
+                            let signal_ref = signal_data.signal_ref.clone();
+                            signal_data = SignalData::default();
+                            Some(EventDefinition::Signal { signal_ref })
                         } else {
                             None
                         };
@@ -521,10 +814,15 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateCatchEvent", b"bpmn:intermediateCatchEvent", b"intermediateCatchEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
                         let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
+                            timer_data = TimerData::default();
                             Some(EventDefinition::Timer {
                                 time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
                                 timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
                             })
+                        } else if signal_data.signal_ref.is_some() {
+                            let signal_ref = signal_data.signal_ref.clone();
+                            signal_data = SignalData::default();
+                            Some(EventDefinition::Signal { signal_ref })
                         } else {
                             None
                         };
@@ -541,6 +839,151 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                             }),
                         );
                     }
+                    element_stack.clear();
+                }
+                // Handle closing of Intermediate Throw Event
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateThrowEvent", b"bpmn:intermediateThrowEvent", b"intermediateThrowEvent"]) {
+                    if let Some(event_id) = current_event_id.take() {
+                        let event_def = if signal_data.signal_ref.is_some() {
+                            let signal_ref = signal_data.signal_ref.clone();
+                            signal_data = SignalData::default();
+                            Some(EventDefinition::Signal { signal_ref })
+                        } else {
+                            None
+                        };
+
+                        elements.insert(
+                            event_id.clone(),
+                            ProcessElement::IntermediateThrowEvent(IntermediateThrowEvent {
+                                base: ElementBase {
+                                    id: event_id,
+                                    name: current_event_name.take(),
+                                    documentation: None,
+                                },
+                                event_definition: event_def,
+                            }),
+                        );
+                    }
+                    element_stack.clear();
+                }
+                // Handle closing of sourceRef
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:sourceRef", b"bpmn:sourceRef", b"sourceRef"]) {
+                    element_stack.pop();
+                }
+                // Handle closing of targetRef
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:targetRef", b"bpmn:targetRef", b"targetRef"]) {
+                    element_stack.pop();
+                }
+                // Handle closing of dataInputAssociation
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataInputAssociation", b"bpmn:dataInputAssociation", b"dataInputAssociation"]) {
+                    if let Some(current) = call_activity_data.current_data_association.take() {
+                        call_activity_data.data_input_associations.push(current);
+                    }
+                    call_activity_data.parsing_data_input = false;
+                    element_stack.retain(|e| e != "dataInputAssociation");
+                }
+                // Handle closing of dataOutputAssociation
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:dataOutputAssociation", b"bpmn:dataOutputAssociation", b"dataOutputAssociation"]) {
+                    if let Some(current) = call_activity_data.current_data_association.take() {
+                        call_activity_data.data_output_associations.push(current);
+                    }
+                    call_activity_data.parsing_data_output = false;
+                    element_stack.retain(|e| e != "dataOutputAssociation");
+                }
+                // Handle closing of loopCardinality
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:loopCardinality", b"bpmn:loopCardinality", b"loopCardinality"]) {
+                    element_stack.pop();
+                }
+                // Handle closing of completionCondition
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:completionCondition", b"bpmn:completionCondition", b"completionCondition"]) {
+                    element_stack.pop();
+                }
+                // Handle closing of multiInstanceLoopCharacteristics
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:multiInstanceLoopCharacteristics", b"bpmn:multiInstanceLoopCharacteristics", b"multiInstanceLoopCharacteristics"]) {
+                    element_stack.pop();
+                }
+                // Handle closing of serviceTask
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
+                    if let Some(task_id) = current_task_id.take() {
+                        let mi = multi_instance_data.clone();
+                        if let Some(ProcessElement::ServiceTask(ref mut task)) = elements.get_mut(&task_id) {
+                            task.loop_characteristics = Some(MultiInstanceLoopCharacteristics {
+                                is_parallel: mi.is_parallel.unwrap_or(false),
+                                loop_cardinality: mi.loop_cardinality,
+                                completion_condition: mi.completion_condition,
+                                behavior: mi.behavior,
+                            });
+                        }
+                    }
+                    multi_instance_data = MultiInstanceData::default();
+                    current_task_type = None;
+                    element_stack.retain(|e| e != "serviceTask" && e != "multiInstanceLoopCharacteristics");
+                }
+                // Handle closing of userTask
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:userTask", b"bpmn:userTask", b"userTask"]) {
+                    if let Some(task_id) = current_task_id.take() {
+                        let mi = multi_instance_data.clone();
+                        if let Some(ProcessElement::UserTask(ref mut task)) = elements.get_mut(&task_id) {
+                            task.loop_characteristics = Some(MultiInstanceLoopCharacteristics {
+                                is_parallel: mi.is_parallel.unwrap_or(false),
+                                loop_cardinality: mi.loop_cardinality,
+                                completion_condition: mi.completion_condition,
+                                behavior: mi.behavior,
+                            });
+                        }
+                    }
+                    multi_instance_data = MultiInstanceData::default();
+                    current_task_type = None;
+                    element_stack.retain(|e| e != "userTask" && e != "multiInstanceLoopCharacteristics");
+                }
+                // Handle closing of scriptTask
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:scriptTask", b"bpmn:scriptTask", b"scriptTask"]) {
+                    if let Some(task_id) = current_task_id.take() {
+                        let mi = multi_instance_data.clone();
+                        if let Some(ProcessElement::ScriptTask(ref mut task)) = elements.get_mut(&task_id) {
+                            task.loop_characteristics = Some(MultiInstanceLoopCharacteristics {
+                                is_parallel: mi.is_parallel.unwrap_or(false),
+                                loop_cardinality: mi.loop_cardinality,
+                                completion_condition: mi.completion_condition,
+                                behavior: mi.behavior,
+                            });
+                        }
+                    }
+                    multi_instance_data = MultiInstanceData::default();
+                    current_task_type = None;
+                    element_stack.retain(|e| e != "scriptTask" && e != "multiInstanceLoopCharacteristics");
+                }
+                // Handle closing of Call Activity
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:callActivity", b"bpmn:callActivity", b"callActivity"]) {
+                    if let Some(call_id) = current_call_activity_id.take() {
+                        elements.insert(
+                            call_id.clone(),
+                            ProcessElement::CallActivity(CallActivity {
+                                base: ElementBase {
+                                    id: call_id,
+                                    name: current_call_activity_name.take(),
+                                    documentation: None,
+                                },
+                                called_element: call_activity_data.called_element.clone(),
+                                business_key: call_activity_data.business_key.clone(),
+                                data_input_associations: call_activity_data.data_input_associations.iter().map(|d| {
+                                    DataAssociation {
+                                        source_ref: d.source_ref.clone(),
+                                        target_ref: d.target_ref.clone(),
+                                        transformation: d.transformation.clone(),
+                                    }
+                                }).collect(),
+                                data_output_associations: call_activity_data.data_output_associations.iter().map(|d| {
+                                    DataAssociation {
+                                        source_ref: d.source_ref.clone(),
+                                        target_ref: d.target_ref.clone(),
+                                        transformation: d.transformation.clone(),
+                                    }
+                                }).collect(),
+                            }),
+                        );
+                    }
+                    call_activity_data = CallActivityData::default();
                     element_stack.clear();
                 }
             }

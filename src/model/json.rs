@@ -68,6 +68,16 @@ pub enum BpmnJsonElement {
     ParallelGateway(BpmnJsonParallelGateway),
     /// Inclusive Gateway
     InclusiveGateway(BpmnJsonInclusiveGateway),
+    /// Data Object
+    DataObject(BpmnJsonDataObject),
+    /// Data Input
+    DataInput(BpmnJsonDataInput),
+    /// Data Output
+    DataOutput(BpmnJsonDataOutput),
+    /// Data Object Reference
+    DataObjectReference(BpmnJsonDataObjectReference),
+    /// Call Activity
+    CallActivity(BpmnJsonCallActivity),
     /// Sequence Flow
     SequenceFlow(BpmnJsonSequenceFlow),
 }
@@ -137,6 +147,9 @@ pub struct BpmnJsonServiceTask {
     /// Input/output mappings
     #[serde(default)]
     pub io_mapping: BpmnJsonIoMapping,
+    /// Multi-instance loop characteristics
+    #[serde(default)]
+    pub loop_characteristics: Option<BpmnJsonMultiInstanceLoopCharacteristics>,
 }
 
 /// User Task
@@ -149,6 +162,9 @@ pub struct BpmnJsonUserTask {
     pub assignment: Option<BpmnJsonAssignment>,
     /// Form key
     pub form_key: Option<String>,
+    /// Multi-instance loop characteristics
+    #[serde(default)]
+    pub loop_characteristics: Option<BpmnJsonMultiInstanceLoopCharacteristics>,
 }
 
 /// Script Task
@@ -161,6 +177,9 @@ pub struct BpmnJsonScriptTask {
     pub script_format: Option<String>,
     /// Script content
     pub script: Option<String>,
+    /// Multi-instance loop characteristics
+    #[serde(default)]
+    pub loop_characteristics: Option<BpmnJsonMultiInstanceLoopCharacteristics>,
 }
 
 /// Manual Task
@@ -201,6 +220,76 @@ pub struct BpmnJsonInclusiveGateway {
     pub base: BpmnJsonElementBase,
     /// Default flow ID
     pub default_flow: Option<String>,
+}
+
+/// Data Object
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BpmnJsonDataObject {
+    #[serde(flatten)]
+    pub base: BpmnJsonElementBase,
+    /// Data state
+    pub data_state: Option<String>,
+}
+
+/// Data Input
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BpmnJsonDataInput {
+    #[serde(flatten)]
+    pub base: BpmnJsonElementBase,
+    /// Input set reference
+    pub input_set: Option<String>,
+}
+
+/// Data Output
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BpmnJsonDataOutput {
+    #[serde(flatten)]
+    pub base: BpmnJsonElementBase,
+    /// Output set reference
+    pub output_set: Option<String>,
+}
+
+/// Data Object Reference
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BpmnJsonDataObjectReference {
+    #[serde(flatten)]
+    pub base: BpmnJsonElementBase,
+    /// Data object reference
+    pub data_object_ref: Option<String>,
+}
+
+/// Call Activity
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BpmnJsonCallActivity {
+    #[serde(flatten)]
+    pub base: BpmnJsonElementBase,
+    /// Called element ID (reference to external process)
+    pub called_element: Option<String>,
+    /// Business key expression
+    pub business_key: Option<String>,
+    /// Input data associations
+    #[serde(default)]
+    pub data_input_associations: Vec<BpmnJsonDataAssociation>,
+    /// Output data associations
+    #[serde(default)]
+    pub data_output_associations: Vec<BpmnJsonDataAssociation>,
+}
+
+/// Data Association
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BpmnJsonDataAssociation {
+    /// Source reference
+    pub source_ref: Option<String>,
+    /// Target reference
+    pub target_ref: Option<String>,
+    /// Transformation expression
+    pub transformation: Option<String>,
 }
 
 /// Sequence Flow
@@ -324,5 +413,21 @@ pub struct BpmnJsonVariable {
     pub variable_type: Option<String>,
     /// Default value
     pub default_value: Option<serde_json::Value>,
+}
+
+/// Multi-Instance Loop Characteristics
+///
+/// JSON representation of BPMN multi-instance loop characteristics.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BpmnJsonMultiInstanceLoopCharacteristics {
+    /// Sequential (false) or parallel (true) execution
+    pub is_parallel: Option<bool>,
+    /// Number of instances to create
+    pub loop_cardinality: Option<i32>,
+    /// Completion condition expression
+    pub completion_condition: Option<String>,
+    /// Behavior when one instance completes
+    pub behavior: Option<String>,
 }
 
