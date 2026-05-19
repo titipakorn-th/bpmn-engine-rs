@@ -6,4 +6,5 @@ mod event_test;
 mod timer_test;
 mod data_object_test;
 mod signal_test;
+mod multi_instance_test;
 

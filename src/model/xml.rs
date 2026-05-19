@@ -153,7 +153,15 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                     current_event_id = attrs.get("id").cloned();
                     current_event_name = attrs.get("name").cloned();
                     timer_data = TimerData::default();
+                    signal_data = SignalData::default();
                     element_stack.push("intermediateCatchEvent".to_string());
+                }
+                // Intermediate Throw Event
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateThrowEvent", b"bpmn:intermediateThrowEvent", b"intermediateThrowEvent"]) {
+                    current_event_id = attrs.get("id").cloned();
+                    current_event_name = attrs.get("name").cloned();
+                    signal_data = SignalData::default();
+                    element_stack.push("intermediateThrowEvent".to_string());
                 }
                 // Timer Event Definition
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:timerEventDefinition", b"bpmn:timerEventDefinition", b"timerEventDefinition"]) {
@@ -844,10 +852,9 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 // Handle closing of Intermediate Throw Event
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateThrowEvent", b"bpmn:intermediateThrowEvent", b"intermediateThrowEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
-                        let event_def = if signal_data.signal_ref.is_some() {
-                            let signal_ref = signal_data.signal_ref.clone();
-                            signal_data = SignalData::default();
-                            Some(EventDefinition::Signal { signal_ref })
+                        let signal_ref_clone = signal_data.signal_ref.clone();
+                        let event_def = if signal_ref_clone.is_some() {
+                            Some(EventDefinition::Signal { signal_ref: signal_ref_clone })
                         } else {
                             None
                         };
@@ -864,6 +871,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                             }),
                         );
                     }
+                    signal_data = SignalData::default();
                     element_stack.clear();
                 }
                 // Handle closing of sourceRef
@@ -906,13 +914,17 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
                     if let Some(task_id) = current_task_id.take() {
                         let mi = multi_instance_data.clone();
-                        if let Some(ProcessElement::ServiceTask(ref mut task)) = elements.get_mut(&task_id) {
-                            task.loop_characteristics = Some(MultiInstanceLoopCharacteristics {
-                                is_parallel: mi.is_parallel.unwrap_or(false),
-                                loop_cardinality: mi.loop_cardinality,
-                                completion_condition: mi.completion_condition,
-                                behavior: mi.behavior,
-                            });
+                        // Only set loop characteristics if we actually parsed multi-instance data
+                        if mi.loop_cardinality.is_some() || mi.is_parallel.is_some() ||
+                           mi.completion_condition.is_some() || mi.behavior.is_some() {
+                            if let Some(ProcessElement::ServiceTask(ref mut task)) = elements.get_mut(&task_id) {
+                                task.loop_characteristics = Some(MultiInstanceLoopCharacteristics {
+                                    is_parallel: mi.is_parallel.unwrap_or(false),
+                                    loop_cardinality: mi.loop_cardinality,
+                                    completion_condition: mi.completion_condition,
+                                    behavior: mi.behavior,
+                                });
+                            }
                         }
                     }
                     multi_instance_data = MultiInstanceData::default();
@@ -923,13 +935,17 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:userTask", b"bpmn:userTask", b"userTask"]) {
                     if let Some(task_id) = current_task_id.take() {
                         let mi = multi_instance_data.clone();
-                        if let Some(ProcessElement::UserTask(ref mut task)) = elements.get_mut(&task_id) {
-                            task.loop_characteristics = Some(MultiInstanceLoopCharacteristics {
-                                is_parallel: mi.is_parallel.unwrap_or(false),
-                                loop_cardinality: mi.loop_cardinality,
-                                completion_condition: mi.completion_condition,
-                                behavior: mi.behavior,
-                            });
+                        // Only set loop characteristics if we actually parsed multi-instance data
+                        if mi.loop_cardinality.is_some() || mi.is_parallel.is_some() ||
+                           mi.completion_condition.is_some() || mi.behavior.is_some() {
+                            if let Some(ProcessElement::UserTask(ref mut task)) = elements.get_mut(&task_id) {
+                                task.loop_characteristics = Some(MultiInstanceLoopCharacteristics {
+                                    is_parallel: mi.is_parallel.unwrap_or(false),
+                                    loop_cardinality: mi.loop_cardinality,
+                                    completion_condition: mi.completion_condition,
+                                    behavior: mi.behavior,
+                                });
+                            }
                         }
                     }
                     multi_instance_data = MultiInstanceData::default();
@@ -940,13 +956,17 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:scriptTask", b"bpmn:scriptTask", b"scriptTask"]) {
                     if let Some(task_id) = current_task_id.take() {
                         let mi = multi_instance_data.clone();
-                        if let Some(ProcessElement::ScriptTask(ref mut task)) = elements.get_mut(&task_id) {
-                            task.loop_characteristics = Some(MultiInstanceLoopCharacteristics {
-                                is_parallel: mi.is_parallel.unwrap_or(false),
-                                loop_cardinality: mi.loop_cardinality,
-                                completion_condition: mi.completion_condition,
-                                behavior: mi.behavior,
-                            });
+                        // Only set loop characteristics if we actually parsed multi-instance data
+                        if mi.loop_cardinality.is_some() || mi.is_parallel.is_some() ||
+                           mi.completion_condition.is_some() || mi.behavior.is_some() {
+                            if let Some(ProcessElement::ScriptTask(ref mut task)) = elements.get_mut(&task_id) {
+                                task.loop_characteristics = Some(MultiInstanceLoopCharacteristics {
+                                    is_parallel: mi.is_parallel.unwrap_or(false),
+                                    loop_cardinality: mi.loop_cardinality,
+                                    completion_condition: mi.completion_condition,
+                                    behavior: mi.behavior,
+                                });
+                            }
                         }
                     }
                     multi_instance_data = MultiInstanceData::default();
