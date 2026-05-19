@@ -3,12 +3,11 @@
 //! Implementation of BPMN event elements with Activity/Capability traits.
 
 use crate::activity::{Activity, ActivityError, ActivityResult};
-use crate::capability::{Capability, CapabilityError, CapabilityResult, CapabilityProvider};
+use crate::capability::Capability;
 use crate::engine::context::ProcessInstanceState;
 use crate::engine::ExecutionContext;
 use crate::model::{StartEvent, EndEvent, IntermediateCatchEvent, IntermediateThrowEvent};
 use async_trait::async_trait;
-use std::collections::HashMap;
 
 /// Start Event Activity
 ///
@@ -91,7 +90,7 @@ impl IntermediateCatchEventActivity {
 
 #[async_trait]
 impl Activity for IntermediateCatchEventActivity {
-    async fn execute(&self, context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
+    async fn execute(&self, _context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
         // Intermediate catch events wait for the event to occur
         // TODO: Implement event waiting based on event definition
         Ok(ActivityResult::Waiting {

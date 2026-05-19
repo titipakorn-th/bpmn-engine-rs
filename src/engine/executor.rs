@@ -3,7 +3,7 @@
 //! Core execution engine for BPMN processes.
 
 use crate::activity::{Activity, ActivityError, ActivityFactory, ActivityResult, DefaultActivityFactory};
-use crate::engine::context::{ExecutionContext, ProcessInstanceState};
+use crate::engine::context::ProcessInstanceState;
 use crate::engine::instance::ProcessInstance;
 use crate::model::ProcessDefinition;
 use std::collections::HashMap;

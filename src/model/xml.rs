@@ -56,7 +56,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
     let mut is_executable: bool = true;
     let mut elements: HashMap<String, ProcessElement> = HashMap::new();
     let mut flows: HashMap<String, SequenceFlow> = HashMap::new();
-    let mut variables: HashMap<String, Variable> = HashMap::new();
+    let variables: HashMap<String, Variable> = HashMap::new();
 
     loop {
         match reader.read_event_into(&mut buf) {

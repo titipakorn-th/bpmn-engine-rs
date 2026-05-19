@@ -3,6 +3,7 @@
 //! Core execution engine for BPMN processes.
 
 pub mod context;
+pub mod evaluator;
 pub mod executor;
 pub mod instance;
 

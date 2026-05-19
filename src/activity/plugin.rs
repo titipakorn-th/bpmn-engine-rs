@@ -3,7 +3,6 @@
 //! Plugin system for extending BPMN engine functionality.
 
 use crate::activity::{Activity, ActivityFactory};
-use crate::model::ProcessElement;
 use std::collections::HashMap;
 use std::sync::Arc;
 

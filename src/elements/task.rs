@@ -3,11 +3,10 @@
 //! Implementation of BPMN task elements with Activity/Capability traits.
 
 use crate::activity::{Activity, ActivityError, ActivityResult};
-use crate::capability::{Capability, CapabilityError, CapabilityResult, CapabilityProvider};
+use crate::capability::Capability;
 use crate::engine::ExecutionContext;
 use crate::model::{ServiceTask, UserTask, ScriptTask, ManualTask};
 use async_trait::async_trait;
-use std::collections::HashMap;
 
 /// Service Task Activity
 ///
@@ -24,7 +23,7 @@ impl ServiceTaskActivity {
 
 #[async_trait]
 impl Activity for ServiceTaskActivity {
-    async fn execute(&self, context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
+    async fn execute(&self, _context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
         // TODO: Implement service task execution
         // For now, just complete immediately
         Ok(ActivityResult::Completed { output_variables: None })
@@ -54,7 +53,7 @@ impl UserTaskActivity {
 
 #[async_trait]
 impl Activity for UserTaskActivity {
-    async fn execute(&self, context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
+    async fn execute(&self, _context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
         // User tasks wait for user input
         Ok(ActivityResult::Waiting {
             reason: format!("User task '{}' waiting for user input", self.task.base.id),
@@ -85,7 +84,7 @@ impl ScriptTaskActivity {
 
 #[async_trait]
 impl Activity for ScriptTaskActivity {
-    async fn execute(&self, context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
+    async fn execute(&self, _context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
         // TODO: Implement script execution
         // For now, just complete immediately
         Ok(ActivityResult::Completed { output_variables: None })
@@ -115,7 +114,7 @@ impl ManualTaskActivity {
 
 #[async_trait]
 impl Activity for ManualTaskActivity {
-    async fn execute(&self, context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
+    async fn execute(&self, _context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
         // Manual tasks are completed immediately (they represent manual work outside the system)
         Ok(ActivityResult::Completed { output_variables: None })
     }
