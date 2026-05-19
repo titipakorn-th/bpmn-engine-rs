@@ -524,6 +524,13 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                         signal_data.signal_ref = Some(signal_ref.clone());
                     }
                 }
+                // Escalation Event Definition (empty)
+                else if matches_element_name(name.as_ref(), &[b"bpmn2:escalationEventDefinition", b"bpmn:escalationEventDefinition", b"escalationEventDefinition"]) {
+                    escalation_data.has_escalation_event = true;
+                    if let Some(escalation_ref) = attrs.get("escalationRef") {
+                        escalation_data.escalation_ref = Some(escalation_ref.clone());
+                    }
+                }
                 // Service Task
                 if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
                     if let Some(id) = attrs.get("id") {
