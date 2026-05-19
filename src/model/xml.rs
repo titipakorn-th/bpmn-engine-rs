@@ -32,6 +32,7 @@ pub struct TimerData {
 #[derive(Debug, Clone, Default)]
 pub struct SignalData {
     pub signal_ref: Option<String>,
+    pub has_signal_event: bool,
 }
 
 /// Data association collected during parsing
@@ -182,7 +183,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 }
                 // Signal Event Definition
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:signalEventDefinition", b"bpmn:signalEventDefinition", b"signalEventDefinition"]) {
-                    signal_data = SignalData::default();
+                    signal_data.has_signal_event = true;
                     if let Some(signal_ref) = attrs.get("signalRef") {
                         signal_data.signal_ref = Some(signal_ref.clone());
                     }
@@ -461,6 +462,13 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                 let name = e.name();
                 let attrs = extract_attributes(&e);
 
+                // Signal Event Definition (empty)
+                if matches_element_name(name.as_ref(), &[b"bpmn2:signalEventDefinition", b"bpmn:signalEventDefinition", b"signalEventDefinition"]) {
+                    signal_data.has_signal_event = true;
+                    if let Some(signal_ref) = attrs.get("signalRef") {
+                        signal_data.signal_ref = Some(signal_ref.clone());
+                    }
+                }
                 // Service Task
                 if matches_element_name(name.as_ref(), &[b"bpmn2:serviceTask", b"bpmn:serviceTask", b"serviceTask"]) {
                     if let Some(id) = attrs.get("id") {
@@ -765,10 +773,8 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                                 time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
                                 timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
                             })
-                        } else if signal_data.signal_ref.is_some() {
-                            let signal_ref = signal_data.signal_ref.clone();
-                            signal_data = SignalData::default();
-                            Some(EventDefinition::Signal { signal_ref })
+                        } else if signal_data.has_signal_event {
+                            Some(EventDefinition::Signal { signal_ref: signal_data.signal_ref.clone() })
                         } else {
                             None
                         };
@@ -785,21 +791,20 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                             }),
                         );
                     }
+                    timer_data = TimerData::default();
+                    signal_data = SignalData::default();
                     element_stack.clear();
                 }
                 // Handle closing of End Event
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:endEvent", b"bpmn:endEvent", b"endEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
                         let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
-                            timer_data = TimerData::default();
                             Some(EventDefinition::Timer {
                                 time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
                                 timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
                             })
-                        } else if signal_data.signal_ref.is_some() {
-                            let signal_ref = signal_data.signal_ref.clone();
-                            signal_data = SignalData::default();
-                            Some(EventDefinition::Signal { signal_ref })
+                        } else if signal_data.has_signal_event {
+                            Some(EventDefinition::Signal { signal_ref: signal_data.signal_ref.clone() })
                         } else {
                             None
                         };
@@ -816,21 +821,20 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                             }),
                         );
                     }
+                    timer_data = TimerData::default();
+                    signal_data = SignalData::default();
                     element_stack.clear();
                 }
                 // Handle closing of Intermediate Catch Event
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateCatchEvent", b"bpmn:intermediateCatchEvent", b"intermediateCatchEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
                         let event_def = if timer_data.time_date.is_some() || timer_data.time_duration.is_some() || timer_data.time_cycle.is_some() {
-                            timer_data = TimerData::default();
                             Some(EventDefinition::Timer {
                                 time_definition: timer_data.time_duration.clone().or(timer_data.time_date.clone()).or(timer_data.time_cycle.clone()),
                                 timer_def: Some(TimerDefinition::from_timer_data(&timer_data)),
                             })
-                        } else if signal_data.signal_ref.is_some() {
-                            let signal_ref = signal_data.signal_ref.clone();
-                            signal_data = SignalData::default();
-                            Some(EventDefinition::Signal { signal_ref })
+                        } else if signal_data.has_signal_event {
+                            Some(EventDefinition::Signal { signal_ref: signal_data.signal_ref.clone() })
                         } else {
                             None
                         };
@@ -847,14 +851,16 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                             }),
                         );
                     }
+                    timer_data = TimerData::default();
+                    signal_data = SignalData::default();
                     element_stack.clear();
                 }
                 // Handle closing of Intermediate Throw Event
                 else if matches_element_name(name.as_ref(), &[b"bpmn2:intermediateThrowEvent", b"bpmn:intermediateThrowEvent", b"intermediateThrowEvent"]) {
                     if let Some(event_id) = current_event_id.take() {
-                        let signal_ref_clone = signal_data.signal_ref.clone();
-                        let event_def = if signal_ref_clone.is_some() {
-                            Some(EventDefinition::Signal { signal_ref: signal_ref_clone })
+                        // Check if signalEventDefinition was encountered (signal_data was modified)
+                        let event_def = if signal_data.has_signal_event {
+                            Some(EventDefinition::Signal { signal_ref: signal_data.signal_ref.clone() })
                         } else {
                             None
                         };
@@ -871,6 +877,7 @@ pub fn parse_bpmn_xml(xml: &str) -> Result<ProcessDefinition, crate::model::form
                             }),
                         );
                     }
+                    timer_data = TimerData::default();
                     signal_data = SignalData::default();
                     element_stack.clear();
                 }

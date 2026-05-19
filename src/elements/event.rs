@@ -118,6 +118,21 @@ impl Activity for IntermediateCatchEventActivity {
                     })
                 }
             }
+            Some(EventDefinition::Signal { signal_ref }) => {
+                // Signal catch event - waits for signal to be thrown
+                // Store signal info in context for platform to handle
+                let signal_key = format!("_signal_{}", self.event.base.id);
+                let signal_value = signal_ref.clone().unwrap_or_else(|| "default".to_string());
+                context.set_variable(signal_key, serde_json::json!(signal_value));
+
+                Ok(ActivityResult::Waiting {
+                    reason: format!(
+                        "Signal catch event '{}' waiting for signal '{}'",
+                        self.event.base.id,
+                        signal_value
+                    ),
+                })
+            }
             _ => {
                 Ok(ActivityResult::Waiting {
                     reason: format!(
@@ -154,8 +169,17 @@ impl IntermediateThrowEventActivity {
 #[async_trait]
 impl Activity for IntermediateThrowEventActivity {
     async fn execute(&self, context: &mut ExecutionContext) -> Result<ActivityResult, ActivityError> {
-        // Intermediate throw events immediately throw the event and continue
-        // TODO: Implement event throwing based on event definition
+        // Signal throw event - emits signal and continues
+        if let Some(EventDefinition::Signal { signal_ref }) = &self.event.event_definition {
+            // Store signal info in context for platform to handle
+            let signal_key = format!("_signal_{}", self.event.base.id);
+            let signal_value = signal_ref.clone().unwrap_or_else(|| "default".to_string());
+            context.set_variable(signal_key, serde_json::json!({
+                "thrown": true,
+                "signalRef": signal_value
+            }));
+        }
+
         let definition = &context.process_definition;
         let outgoing_flows = definition.get_outgoing_flows(&self.event.base.id);
         let next_elements: Vec<String> = outgoing_flows
