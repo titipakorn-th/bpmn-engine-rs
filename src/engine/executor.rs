@@ -111,6 +111,12 @@ impl Engine {
             context.set_current_elements(start_events);
         }
 
+        // Notify process start
+        {
+            let context = instance.context().await;
+            self.notify_process_start(&context).await;
+        }
+
         // Execute process loop
         loop {
             let should_continue = {
@@ -130,6 +136,7 @@ impl Engine {
                         Some(e) => e,
                         None => {
                             context.state = ProcessInstanceState::Failed;
+                            self.notify_process_fail(&context, "element not found").await;
                             return Err(EngineError::ElementNotFound(element_id));
                         }
                     };
@@ -139,14 +146,21 @@ impl Engine {
                         Ok(a) => a,
                         Err(e) => {
                             context.state = ProcessInstanceState::Failed;
+                            self.notify_process_fail(&context, &format!("activity creation failed: {}", e)).await;
                             return Err(EngineError::ActivityExecutionError(e));
                         }
                     };
 
                     // Execute activity
+                    self.notify_activity_start(&context, &element_id).await;
                     let activity_result = match activity.execute(&mut context).await {
-                        Ok(result) => result,
+                        Ok(result) => {
+                            self.notify_activity_complete(&context, &element_id, &result).await;
+                            result
+                        }
                         Err(e) => {
+                            self.notify_activity_fail(&context, &element_id, &e.to_string()).await;
+                            self.notify_process_fail(&context, &e.to_string()).await;
                             context.state = ProcessInstanceState::Failed;
                             return Err(EngineError::ActivityExecutionError(e));
                         }
@@ -209,6 +223,7 @@ impl Engine {
                             match element {
                                 crate::model::ProcessElement::EndEvent(_) => {
                                     context.state = ProcessInstanceState::Completed;
+                                    self.notify_process_complete(&context).await;
                                     return Ok(());
                                 }
                                 _ => {
@@ -234,6 +249,7 @@ impl Engine {
 
                             if has_end_event {
                                 context.state = ProcessInstanceState::Completed;
+                                self.notify_process_complete(&context).await;
                                 return Ok(());
                             }
 
@@ -250,6 +266,15 @@ impl Engine {
             }
         }
 
+        // Notify based on final state - only for Active state (edge case where loop exits without EndEvent)
+        // Completed and Failed states are already handled inside the loop with early returns
+        let final_context = instance.context().await;
+        if final_context.state == ProcessInstanceState::Active {
+            // Process exited loop without hitting an EndEvent - this is unusual but can happen
+            // if the process has no outgoing flows from the last element
+            tracing::debug!("Process ended in Active state without EndEvent");
+        }
+
         Ok(())
     }
 
@@ -263,6 +288,60 @@ impl Engine {
     pub async fn add_listener(&self, listener: Arc<dyn ProcessListener>) {
         let registry = self.listener_registry.write().await;
         registry.register(listener).await;
+    }
+
+    async fn notify_process_start(&self, context: &crate::engine::context::ExecutionContext) {
+        let listeners = self.listener_registry.read().await.get_listeners().await;
+        for listener in listeners {
+            if let Err(e) = listener.on_process_start(context).await {
+                tracing::warn!("Listener on_process_start failed: {:?}", e);
+            }
+        }
+    }
+
+    async fn notify_process_complete(&self, context: &crate::engine::context::ExecutionContext) {
+        let listeners = self.listener_registry.read().await.get_listeners().await;
+        for listener in listeners {
+            if let Err(e) = listener.on_process_complete(context).await {
+                tracing::warn!("Listener on_process_complete failed: {:?}", e);
+            }
+        }
+    }
+
+    async fn notify_process_fail(&self, context: &crate::engine::context::ExecutionContext, error: &str) {
+        let listeners = self.listener_registry.read().await.get_listeners().await;
+        for listener in listeners {
+            if let Err(e) = listener.on_process_fail(context, error).await {
+                tracing::warn!("Listener on_process_fail failed: {:?}", e);
+            }
+        }
+    }
+
+    async fn notify_activity_start(&self, context: &crate::engine::context::ExecutionContext, activity_id: &str) {
+        let listeners = self.listener_registry.read().await.get_listeners().await;
+        for listener in listeners {
+            if let Err(e) = listener.on_activity_start(context, activity_id).await {
+                tracing::warn!("Listener on_activity_start failed: {:?}", e);
+            }
+        }
+    }
+
+    async fn notify_activity_complete(&self, context: &crate::engine::context::ExecutionContext, activity_id: &str, result: &ActivityResult) {
+        let listeners = self.listener_registry.read().await.get_listeners().await;
+        for listener in listeners {
+            if let Err(e) = listener.on_activity_complete(context, activity_id, result).await {
+                tracing::warn!("Listener on_activity_complete failed: {:?}", e);
+            }
+        }
+    }
+
+    async fn notify_activity_fail(&self, context: &crate::engine::context::ExecutionContext, activity_id: &str, error: &str) {
+        let listeners = self.listener_registry.read().await.get_listeners().await;
+        for listener in listeners {
+            if let Err(e) = listener.on_activity_fail(context, activity_id, error).await {
+                tracing::warn!("Listener on_activity_fail failed: {:?}", e);
+            }
+        }
     }
 }
 

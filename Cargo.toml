@@ -33,6 +33,9 @@ quick-xml = { version = "0.31", features = ["serialize"] }
 thiserror = "1"
 anyhow = "1"
 
+# Tracing
+tracing = "0.1"
+
 # Async traits
 async-trait = "0.1"
 
