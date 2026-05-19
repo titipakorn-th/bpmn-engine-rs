@@ -165,7 +165,6 @@ fn test_call_activity_json_roundtrip() {
     let serialized = process.to_json();
     assert!(serialized.is_ok());
     let json_str = serialized.unwrap();
-    println!("Serialized JSON: {}", json_str);
     assert!(json_str.contains("calledElement"));
     assert!(json_str.contains("businessKey"));
 }
